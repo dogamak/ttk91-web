@@ -4,7 +4,7 @@
 
 <script>
   import ace from 'ace-builds';
-  import * as ttk91 from 'ttk91';
+  import * as ttk91 from '@dogamak/ttk91-wasm';
 
   ace.config.set('basePath', 'dist');
 
