@@ -69,7 +69,7 @@ const workerConfig = {
   resolve: {
     extensions: ['*','.js','.json','*.wasm'],
     alias: {
-      'ttk91': path.resolve(__dirname, '../ttk91-wasm/pkg'),
+      'ttk91': '@dogamak/ttk91-wasm',
     },
   },
   /*plugins: [
