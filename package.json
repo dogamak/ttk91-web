@@ -28,7 +28,7 @@
   "homepage": "https://github.com/rustwasm/create-wasm-app#readme",
   "dependencies": {
     "ace-builds": "^1.4.7",
-    "ttk91-wasm": "file:../ttk91-wasm/pkg"
+    "@dogamak/ttk91-wasm": "^0.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.7.5",
@@ -40,7 +40,7 @@
     "copy-webpack-plugin": "^5.0.0",
     "css-loader": "^3.2.1",
     "file-loader": "^5.0.2",
-    "ttk91-wasm": "file:../ttk91-wasm/pkg",
+    "@dogamak/ttk91-wasm": "^0.1.0",
     "vue": "^2.6.10",
     "vue-loader": "^15.7.2",
     "vue-multipane": "^0.9.5",
