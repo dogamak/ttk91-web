@@ -18,3 +18,18 @@ jobs:
         npm run build
       env:
         CI: true
+    - name: Upload dist/ as an artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: ttk91web-dist
+        path: dist/
+    - name: Deploy
+      if: github.ref == 'ref/heads/master'
+      run: |
+        mkdir "$HOME/.ssh"
+        echo "${{ secrets.DEPLOY_KEY }}" > "$HOME/.ssh/deploy_key"
+        chmod 600 "$SSH_PATH/deploy_key"
+        rsync --delete -avz \
+          -e "ssh -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+          "$GITHUB_WORKSPACE/dist/" \
+          ttk91web@karhusaari.me:/var/www/ttk91web
