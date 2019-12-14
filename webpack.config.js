@@ -52,7 +52,7 @@ const workerConfig = {
   entry: './src/worker.js',
   output: {
     path: path.resolve(__dirname, "dist"),
-    publicPath: "/dist/",
+    publicPath: "/ttk91web/",
     filename: "worker.js",
   },
   target: 'webworker',
