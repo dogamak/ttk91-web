@@ -24,7 +24,7 @@ jobs:
         name: ttk91web-dist
         path: dist/
     - name: Deploy
-      if: github.ref == 'ref/heads/master'
+      # if: github.ref == 'ref/heads/master'
       run: |
         mkdir "$HOME/.ssh"
         echo "${{ secrets.DEPLOY_KEY }}" > "$HOME/.ssh/deploy_key"
