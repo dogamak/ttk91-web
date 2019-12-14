@@ -17,6 +17,19 @@ const appConfig = {
   module: {
     rules: [
       {
+        test: /\.s[ac]ss$/,
+        use: [
+          'vue-style-loader',
+          'css-loader',
+          {
+            loader: 'sass-loader',
+            options: {
+              prependData: '@import "@/globals.scss";',
+            },
+          }
+        ],
+      },
+      {
         test: /\.css$/,
         use: ['vue-style-loader', 'css-loader'],
       },
@@ -37,10 +50,20 @@ const appConfig = {
         ],
         exclude: /node_modules/,
       },
+      {
+        test: /\.(svg|png|jpe?g)$/,
+        loader: 'url-loader',
+        options: {
+          esModule: false,
+        },
+      },
     ],
   },
   resolve: {
     extensions: ['*','.js','.vue','.json'],
+    alias: {
+      '@': path.join(__dirname, 'src'),
+    },
   },
   plugins: [
     new CopyWebpackPlugin(['index.html']),
@@ -70,6 +93,7 @@ const workerConfig = {
     extensions: ['*','.js','.json','*.wasm'],
     alias: {
       'ttk91': '@dogamak/ttk91-wasm',
+      '@': path.join(__dirname, 'src'),
     },
   },
   /*plugins: [
