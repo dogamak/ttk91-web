@@ -25,10 +25,10 @@ jobs:
         path: dist/
     - name: Setup SSH
       uses: webfactory/ssh-agent@v0.1.1
-      # if: github.ref == 'ref/heads/master'
+      if: github.ref == 'ref/heads/master'
       with:
         ssh-private-key: ${{ secrets.DEPLOY_KEY }}
     - name: Deploy
-      # if: github.ref == 'ref/heads/master'
+      if: github.ref == 'ref/heads/master'
       run: |
         rsync --delete -avz -e "ssh -o StrictHostKeyChecking=no" "$GITHUB_WORKSPACE/dist/" ttk91web@karhusaari.me:/var/www/ttk91web
