@@ -31,7 +31,4 @@ jobs:
     - name: Deploy
       # if: github.ref == 'ref/heads/master'
       run: |
-        rsync --delete -avz \
-          -e "ssh -o StrictHostKeyChecking=no"
-          "$GITHUB_WORKSPACE/dist/" \
-          ttk91web@karhusaari.me:/var/www/ttk91web
+        rsync --delete -avz -e "ssh -o StrictHostKeyChecking=no" "$GITHUB_WORKSPACE/dist/" ttk91web@karhusaari.me:/var/www/ttk91web
