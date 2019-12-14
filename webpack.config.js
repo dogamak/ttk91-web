@@ -10,7 +10,7 @@ const appConfig = {
   },
   output: {
     path: path.resolve(__dirname, "dist"),
-    publicPath: "/dist/",
+    publicPath: "/ttk91web/",
     filename: "[name].js",
   },
   mode: "development",
