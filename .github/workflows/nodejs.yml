@@ -1,0 +1,34 @@
+name: Webpack
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-node@v1
+    - name: npm install, build, and test
+      run: |
+        npm config set @dogamak:registry https://npm.pkg.github.com
+        npm config set '//npm.pkg.github.com/:_authToken' ${{ secrets.GITHUB_REGISTRY_TOKEN }}
+        npm ci
+        npm run build
+      env:
+        CI: true
+    - name: Upload dist/ as an artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: ttk91web-dist
+        path: dist/
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.1.1
+      if: github.ref == 'ref/heads/master'
+      with:
+        ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+    - name: Deploy
+      if: github.ref == 'ref/heads/master'
+      run: |
+        rsync --delete -avz -e "ssh -o StrictHostKeyChecking=no" "$GITHUB_WORKSPACE/dist/" ttk91web@karhusaari.me:/var/www/ttk91web

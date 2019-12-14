@@ -10,7 +10,7 @@ const appConfig = {
   },
   output: {
     path: path.resolve(__dirname, "dist"),
-    publicPath: "/dist/",
+    publicPath: "/ttk91web/",
     filename: "[name].js",
   },
   mode: "development",
@@ -52,7 +52,7 @@ const workerConfig = {
   entry: './src/worker.js',
   output: {
     path: path.resolve(__dirname, "dist"),
-    publicPath: "/dist/",
+    publicPath: "/ttk91web/",
     filename: "worker.js",
   },
   target: 'webworker',
@@ -69,7 +69,7 @@ const workerConfig = {
   resolve: {
     extensions: ['*','.js','.json','*.wasm'],
     alias: {
-      'ttk91': path.resolve(__dirname, '../ttk91-wasm/pkg'),
+      'ttk91': '@dogamak/ttk91-wasm',
     },
   },
   /*plugins: [
