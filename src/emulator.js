@@ -1,5 +1,5 @@
 import store from './store.js';
-export let worker = new Worker('/dist/worker.js');
+export let worker = new Worker('/ttk91web/worker.js');
 
 worker.postMessage({
   who: 'Jorma',
@@ -42,7 +42,7 @@ export function run() {
 
 export function stop() {
   worker.terminate();
-  worker = new Worker('/dist/worker.js');
+  worker = new Worker('/ttk91web/worker.js');
   worker.postMessage({
     type: 'load',
     program: store.state.assembly,

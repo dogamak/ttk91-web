@@ -6,7 +6,7 @@
   import ace from 'ace-builds';
   import * as ttk91 from '@dogamak/ttk91-wasm';
 
-  ace.config.set('basePath', 'dist');
+  ace.config.set('basePath', 'ttk91web');
 
   export default {
     name: 'Editor',
