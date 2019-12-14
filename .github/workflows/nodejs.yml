@@ -23,13 +23,14 @@ jobs:
       with:
         name: ttk91web-dist
         path: dist/
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.1.1
+      # if: github.ref == 'ref/heads/master'
+      with:
+        ssh-private-key: ${{ secrest.DEPLOY_KEY }}
     - name: Deploy
       # if: github.ref == 'ref/heads/master'
       run: |
-        mkdir "$HOME/.ssh"
-        echo "${{ secrets.DEPLOY_KEY }}" > "$HOME/.ssh/deploy_key"
-        chmod 600 "$SSH_PATH/deploy_key"
         rsync --delete -avz \
-          -e "ssh -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=no" \
           "$GITHUB_WORKSPACE/dist/" \
           ttk91web@karhusaari.me:/var/www/ttk91web
