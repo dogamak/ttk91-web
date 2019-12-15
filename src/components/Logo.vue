@@ -1,5 +1,7 @@
 <template>
-  <inline-svg src="../assets/ttk91web.svg" :style="{'--highlight-color': highlight, '--color': color}" />
+  <inline-svg
+    :src="require('../../assets/ttk91web.svg')"
+    :style="{'--highlight-color': highlight, '--color': color}" />
 </template>
 
 <script>
