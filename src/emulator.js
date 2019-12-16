@@ -3,7 +3,7 @@ import Vuex from 'vuex';
 import store from './store.js';
 export let worker = new Worker('/ttk91web/worker.js');
 
-/*
+/**
  * This monstrosity is used to generate the `eventHandler` and `messageHandler` decorators.
  * The first arguments is the name of the property where a list of the listeners should be maintained.
  * The second argument is the name of the generated dispatch method, which is used to send messages

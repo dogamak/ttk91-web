@@ -19,7 +19,6 @@
       label: {
         type: String,
         required: true,
-        default: 'asdasda',
       },
 
       /**
