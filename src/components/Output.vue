@@ -17,6 +17,9 @@
 <script>
   import { leftPad } from '@/utils.js';
 
+  /**
+   * Displays the values the emulator has printed.
+   */
   export default {
     name: 'Output',
 
@@ -25,6 +28,9 @@
     },
 
     computed: {
+      /**
+       * The numbers the emulator has printed during the current programs execution.
+       */
       output () {
         let output = [];
 

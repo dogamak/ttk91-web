@@ -25,6 +25,9 @@
   import InlineSvg from 'vue-inline-svg';
   import Logo from './components/Logo.vue';
 
+  /**
+   * Root component of the app.
+   */
   export default {
     name: 'App',
     components: { Editor, Multipane, MultipaneResizer, ControlPanel, InlineSvg, Logo, Controls },

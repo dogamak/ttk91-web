@@ -20,10 +20,23 @@
 <script>
   import { leftPad } from '@/utils.js';
 
+  /**
+   * Displays a table of all registers and their values in multiple formats.
+   */
   export default {
     name: 'Registers',
 
     computed: {
+      /**
+       * @typedef {Object} Register
+       * @prop {string} name - Human readable name of the register.
+       * @prop {number} value - Value of the register.
+       */
+
+      /**
+       * List of registers and their values.
+       * @type {Register[]}
+       */
       registers () {
         let registers = [];
 

@@ -3,10 +3,17 @@ import Vuex from 'vuex';
 import store from './store.js';
 export let worker = new Worker('/ttk91web/worker.js');
 
-// This monstrosity is used to generate the `eventHandler` and `messageHandler` decorators.
-// The first arguments is the name of the property where a list of the listeners should be maintained.
-// The second argument is the name of the generated dispatch method, which is used to send messages
-// to the listeners.
+/*
+ * This monstrosity is used to generate the `eventHandler` and `messageHandler` decorators.
+ * The first arguments is the name of the property where a list of the listeners should be maintained.
+ * The second argument is the name of the generated dispatch method, which is used to send messages
+ * to the listeners.
+ *
+ * @param {string} listPropertyName - Name of the class property into which the list of callbacks will be stored.
+ * @param {string} dispatchMethodName - Name for a generated method for dispatching messages to the callbacks.
+ *
+ * @return {function} A method decorator.
+ */
 function callbackRegisteringDecoratorFactory (listPropertyName, dispatchMethodName) {
   return (messageType) => {
     return (target, name, descriptor) => {
@@ -35,24 +42,51 @@ function callbackRegisteringDecoratorFactory (listPropertyName, dispatchMethodNa
   }
 }
 
-function property (target, name, descriptor) {
-  let value = descriptor.value;
-
-  delete descriptor.initializer;
-  delete descriptor.value;
-  delete descriptor.writable;
-
-  descriptor.get = value.bind(target);
-  return descriptor;
-}
-
-// Message handlers are called when messages are received from the Worker.
+/**
+ * Decorator that registers the method as an message handler.
+ *
+ * @param {string} name - The name of the message type this method will be called for.
+ */
 const messageHandler = callbackRegisteringDecoratorFactory('messageHandlers', 'dispatchMessage');
 
-// Event handlers are called when events are received from the emulator.
+/**
+ * Decorator that registers the method as an event handler.
+ *
+ * @param {string} name - The name of the event type this method will be called for.
+ */
 const eventHandler = callbackRegisteringDecoratorFactory('eventHandler', 'dispatchEvent');
 
+/**
+ * A message from the web worker.
+ *
+ * @typedef {Object} Message
+ * @property {string} type - The type of the message.
+ * @property {number} id - The id of the message this message is response to.
+ * @property {Object} payload - The payload of the message.
+ */
+
+/**
+ * An event from the emulator.
+ *
+ * @typedef {Object} Event
+ * @property {string} kind - The kind of the event.
+ * @property {Object} payload - The payload of the event.
+ */
+
+/**
+ * The MessageEvent interface represents a message received by a target object.
+ *
+ * @external MessageEvent
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/MessageEvent|MessageEvent at MDN}
+ */
+
+/**
+ * An emulator instance running as a separate thread in a web worker.
+ */
 class Emulator {
+  /**
+   * Spawns a new web worker for the emulator and registers neccessary callbacks to it.
+   */
   constructor () {
     this.worker = new Worker('/ttk91web/worker.js');
 
@@ -69,6 +103,17 @@ class Emulator {
     });
   }
 
+  /**
+   * Sends a message to the web worker.
+   *
+   * @param {string} type - The message type.
+   * @param {object} payload - The payload of the message.
+   * @param {boolean} [expectResponse=false] - Whether or not to expect a
+   * response from the web worker.
+   *
+   * @return {(Promise<Message>|void)} Returns a Promise for receiving the response if
+   * expectResponse parameter is set to true, otherwise does not return a value.
+   */
   postMessage(type, payload, expectResponse) {
     if (arguments.length == 2)
       expectResponse = false;
@@ -88,6 +133,13 @@ class Emulator {
     }
   }
 
+  /**
+   * Callback that is invoked every time a message from the web worker is received.
+   *
+   * @param {external:MessageEvent} event - The message event received from the web worker.
+   *
+   * @return {Promise} Promise for awaiting the execution of a message handler.
+   */
   async onMessage ({ data }) {
     if ('id' in data) {
       let promise = this.promises[data.id];
@@ -101,44 +153,101 @@ class Emulator {
     }
   }
 
+  /**
+   * Compile and load a program into the emulator.
+   * 
+   * @param {string} program - The assembly code for the program.
+   */
   execute (program) {
     this.postMessage('load', { program });
   }
 
+  /**
+   * Start executing the loaded program until it halts or an error occurs.
+   */
   run () {
     this.postMessage('run');
   }
 
+  /**
+   * Execute only the next instruction.
+   */
   step () {
     this.postMessage('step');
   }
 
+  /**
+   * Stops the execution started with {@link run}.
+   * Resets the state of the Emulator.
+   */
   stop () {
     this.worker.terminate();
     this.worker = new Worker('/ttk91web/worker.js');
     this.load(store.state.assembly);
   }
 
+  /**
+   * Reads a memory location from the emulator's virtual memory.
+   *
+   * @param {number} address - The memory location's address.
+   *
+   * @return {Promise<Message>} Promise resolving the response message.
+   */
   readAddress (address) {
     return this.postMessage('readAddress', { address }, true);
   }
 
+  /**
+   * Message handler that is called every time the emulator has produced more output.
+   *
+   * @param {Object} message - The message object.
+   * @param {number[]} message.registers - State of the emulator's registers.
+   * @param {number[]} message.output - An array containing all numbers printed by the program since it's launch.
+   * @param {number} message.line - The current source code line of execution.
+   */
   @messageHandler('output')
   onOutput ({ registers, output, line }) {
     store.commit('setOutput', { output });
     store.commit('setExecutionLine', { line });
   }
 
+  /**
+   * Message handler that is called whenever all emulator's registers are reset.
+   *
+   * @param {Object} message - The message object.
+   * @param {number[]} message.registers - New values for all registers.
+   */
   @messageHandler('setRegisters')
   onSetRegisters ({ registers }) {
     store.commit('resetEmulator', { registers });
   }
 
+  /**
+   * Message handler that is called every time the emulator emits a new event.
+   * The event is dispatched further to the appropriate event handler.
+   *
+   * @param {Object} message - The message object.
+   * @param {string} message.kind - The event kind. This determines the invoked event handler.
+   * @param {Object} message.payload - The event payload.
+   */
   @messageHandler('event')
   async onEmulatorEvent ({ kind, payload }) {
     await this.dispatchEvent(kind, payload);
   }
 
+  /**
+   * Event handler that is called whenever a register's value changes.
+   *
+   * If the changed register is the stack pointer, this invokes a stack update.
+   * The stack update may involve querying information from the emulator and
+   * returns a Promise, which is why this callback is asynchronous.
+   *
+   * @param {Object} event - The event object.
+   * @param {number} event.register - The index of the changed register.
+   * @param {number} event.data - The new value of the register.
+   *
+   * @return {Promise} Promise for awaiting that the store is updated fully.
+   */
   @eventHandler('register-change')
   async onRegisterChange ({ register, data }) {
     store.commit('setRegister', { register, data });
@@ -148,6 +257,13 @@ class Emulator {
     }
   }
 
+  /**
+   * Makes sure the the stack is up to date in the store and makes any neccessary updates.
+   *
+   * @param {number} newStackPointer - The new value of the stack pointer register.
+   *
+   * @return {Promise} Promise for awaiting that the update has been ompleted in full.
+   */
   async updateStack (newStackPointer) {
     await store.dispatch('updateStack', {
       address: newStackPointer,
@@ -155,6 +271,12 @@ class Emulator {
   }
 }
 
+/*
+ * The global Emulator instance.
+ *
+ * @type {Emulator}
+ */
 const EMULATOR = new Emulator();
+
 export default EMULATOR;
 
