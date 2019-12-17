@@ -32,13 +32,7 @@
        * The numbers the emulator has printed during the current programs execution.
        */
       output () {
-        let output = [];
-
-        for (let i = 0; i < this.$store.state.output.length; i++) {
-          output.push(this.$store.state.output[i]);
-        }
-
-        return output;
+        return this.$emulator.output;
       },
     },
   };

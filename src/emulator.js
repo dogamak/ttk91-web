@@ -83,7 +83,7 @@ const eventHandler = callbackRegisteringDecoratorFactory('eventHandler', 'dispat
 /**
  * An emulator instance running as a separate thread in a web worker.
  */
-class Emulator {
+export class Emulator {
   /**
    * Spawns a new web worker for the emulator and registers neccessary callbacks to it.
    */
@@ -97,10 +97,57 @@ class Emulator {
 
     this.stack = [];
     this.output = [];
-    Vue.util.defineReactive(this, '_registers', []);
-    Object.defineProperty(this, 'registers', {
+
+    this.watchers = {};
+
+    Vue.util.defineReactive(this, 'registers', [0,0,0,0,0,0,0]);
+    Vue.util.defineReactive(this, 'memory', {});
+    Vue.util.defineReactive(this, 'symbols', {});
+    Vue.util.defineReactive(this, 'output', []);
+    Vue.util.defineReactive(this, 'executionLine', 1);
+
+    /*Object.defineProperty(this, 'registers', {
       get () { return this._registers; }
+    });*/
+  }
+
+  static install (Vue, options) {
+    let emulator = new Emulator();
+
+    Vue.mixin({
+      beforeCreate () {
+        this._emulator = emulator;
+
+        Object.defineProperty(this, '$emulator', {
+          get () {
+            return this._emulator;
+          },
+        });
+      },
     });
+  }
+
+  registerAddressWatcher (watcher, address) {
+    if (!(address in this.watchers))
+      this.watchers[address] = [];
+
+    this.watchers[address].push(watcher);
+  }
+
+  unregisterAddressWatchers (watcher, address) {
+    if (!(address in this.watchers))
+      return;
+
+    let index = this.watchers[address].indexOf(watcher);
+
+    if (index !== -1) {
+      this.watchers[address].splice(index, 1);
+
+      if (this.watchers[address].length === 0) {
+        delete this.watchers[address];
+        delete this.memory[address];
+      }
+    }
   }
 
   /**
@@ -160,6 +207,9 @@ class Emulator {
    */
   execute (program) {
     this.postMessage('load', { program });
+    this.memory = [];
+    this.registers = [0, 0, 0, 0, 0, 0, 0];
+    this.symbols = {};
   }
 
   /**
@@ -207,8 +257,8 @@ class Emulator {
    */
   @messageHandler('output')
   onOutput ({ registers, output, line }) {
-    store.commit('setOutput', { output });
-    store.commit('setExecutionLine', { line });
+    this.output = output;
+    this.executionLine = line;
   }
 
   /**
@@ -219,7 +269,7 @@ class Emulator {
    */
   @messageHandler('setRegisters')
   onSetRegisters ({ registers }) {
-    store.commit('resetEmulator', { registers });
+    this.registers = [...registers];
   }
 
   /**
@@ -238,36 +288,29 @@ class Emulator {
   /**
    * Event handler that is called whenever a register's value changes.
    *
-   * If the changed register is the stack pointer, this invokes a stack update.
-   * The stack update may involve querying information from the emulator and
-   * returns a Promise, which is why this callback is asynchronous.
-   *
    * @param {Object} event - The event object.
    * @param {number} event.register - The index of the changed register.
    * @param {number} event.data - The new value of the register.
-   *
-   * @return {Promise} Promise for awaiting that the store is updated fully.
    */
   @eventHandler('register-change')
   async onRegisterChange ({ register, data }) {
-    store.commit('setRegister', { register, data });
-
-    if (register === 7) {
-      await this.updateStack(data)
-    }
+    Vue.set(this.registers, register, data);
   }
 
-  /**
-   * Makes sure the the stack is up to date in the store and makes any neccessary updates.
-   *
-   * @param {number} newStackPointer - The new value of the stack pointer register.
-   *
-   * @return {Promise} Promise for awaiting that the update has been ompleted in full.
-   */
-  async updateStack (newStackPointer) {
-    await store.dispatch('updateStack', {
-      address: newStackPointer,
-    });
+  @eventHandler('memory-change')
+  onMemoryChange({ address, data }) {
+    Vue.set(this.memory, address, data);
+  }
+
+  @messageHandler('setSymbolTable')
+  async onSetSourceMap ({ symbols }) {
+    this.symbols = symbols;
+
+    for (let address of Object.values(symbols)) {
+      let res = await this.readAddress(address);
+      console.log(address, res);
+      Vue.set(this.memory, address, res.payload.value);
+    }
   }
 }
 

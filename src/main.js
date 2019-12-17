@@ -7,9 +7,11 @@ import AsyncComputed from 'vue-async-computed';
 
 Vue.use(AsyncComputed);
 
-import './emulator.js';
+import { Emulator } from './emulator.js';
 import store from './store.js';
 import App from './App.vue';
+
+Vue.use(Emulator);
 
 new Vue({
   store,
