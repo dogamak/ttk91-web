@@ -5,18 +5,51 @@
 </template>
 
 <script>
+  /**
+   * A styled button.
+   */
   export default {
     name: 'Button',
 
     props: {
-      label: String,
+      /**
+       * The label displayed on the button.
+       * @type {number}
+       */
+      label: {
+        type: String,
+        required: true,
+      },
+
+      /**
+       * If present this button is considered a primary button.
+       * This can affect both styling and functionality.
+       */
       primary: Boolean,
+
+      /**
+       * If present this button is considered a secondary button.
+       * This can affect both styling and functionality.
+       */
       secondary: Boolean,
+
+      /**
+       * If this property is present, the button cannot be activated
+       * and appears as faded out.
+       */
       disabled: Boolean,
+
+      /**
+       * The color of this button.
+       * Overrides styling set for primary or secondary buttons.
+       */
       color: String,
     },
 
     computed: {
+      /**
+       * Generates the list of CSS classes for the button based on the properties
+       */
       classes () {
         let classes = [];
 
@@ -37,6 +70,10 @@
     },
 
     methods: {
+      /**
+       * Callback that is called whenever the user clicks the button.
+       * Propagates the even upward the Component chain.
+       */
       onClick (evt) {
         if (!this.disabled) {
           this.$emit('click', evt);

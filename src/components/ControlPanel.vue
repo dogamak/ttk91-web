@@ -1,20 +1,14 @@
 <template>
   <div class="control-panel">
-    <div class="registers-container">
-      <h3>Registers:</h3>
-      <Registers />
-    </div>
-    <div class="state-container">
-      <h3>Flags:</h3>
-      Current line: {{ executionLine }}
-    </div>
+    <h3>Registers:</h3>
+    <Registers />
     <h3>Output:</h3>
     <Output />
   </div>
 </template>
 
 <script>
-  import * as emulator from '../emulator.js';
+  import emulator from '../emulator.js';
   import Registers from './Registers.vue';
   import Output from './Output.vue';
 
@@ -32,7 +26,26 @@
     computed: {
       executionLine () {
         return this.$store.state.executionLine;
-      }
+      },
+
+      stackPointer () {
+        return this.$store.state.stackPointer;
+      },
+
+      registers () {
+        return this.$store.state.registers;
+      },
+    },
+
+    asyncComputed: {
+      async stackValue () {
+        if (this.$store.state.stackBaseAddress !== this.$store.state.stackPointer) {
+          let response = await emulator.readAddress(this.$store.state.stackPointer + 1);
+          return response.payload.value;
+        } else {
+          return 0;
+        }
+      },
     },
   };
 </script>

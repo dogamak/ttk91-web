@@ -8,6 +8,9 @@
 
   ace.config.set('basePath', '/ttk91web');
 
+  /**
+   * Wrapper component for the Ace editor.
+   */
   export default {
     name: 'Editor',
 

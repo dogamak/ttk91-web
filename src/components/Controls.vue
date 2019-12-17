@@ -8,7 +8,7 @@
 </template>
 
 <script>
-  import * as emulator from '../emulator.js';
+  import emulator from '../emulator.js';
   import Button from './Button.vue';
 
   export default {
