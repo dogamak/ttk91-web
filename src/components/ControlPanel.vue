@@ -1,15 +1,7 @@
 <template>
   <div class="control-panel">
-    <div class="registers-container">
-      <h3>Registers:</h3>
-      <Registers />
-    </div>
-    <div class="state-container">
-      <h3>Flags:</h3>
-      Current line: {{ executionLine }} <br />
-      Stack Pointer: {{ registers }} <br />
-      Latest Stack Value: {{ stackValue }}
-    </div>
+    <h3>Registers:</h3>
+    <Registers />
     <h3>Output:</h3>
     <Output />
   </div>
