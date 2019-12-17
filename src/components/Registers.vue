@@ -43,7 +43,7 @@
         for (let i = 1; i < 8; i++) {
           registers.push({
             name: `R${i}`,
-            value: this.$store.state.registers[i] || 0,
+            value: this.$emulator.registers[i] || 0,
           });
         }
 

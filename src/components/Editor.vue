@@ -62,7 +62,7 @@
 
     computed: {
       executionLine () {
-        return this.$store.state.executionLine;
+        return this.$emulator.executionLine;
       }
     },
 

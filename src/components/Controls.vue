@@ -8,7 +8,6 @@
 </template>
 
 <script>
-  import emulator from '../emulator.js';
   import Button from './Button.vue';
 
   export default {
@@ -18,19 +17,19 @@
 
     methods: {
       onExecute () {
-        emulator.execute(this.$store.state.assembly);
+        this.$emulator.execute(this.$store.state.assembly);
       },
 
       onStep () {
-        emulator.step();
+        this.$emulator.step();
       },
 
       onRun () {
-        emulator.run();
+        this.$emulator.run();
       },
 
       onStop () {
-        emulator.stop();
+        this.$emulator.stop();
       },
     },
   }

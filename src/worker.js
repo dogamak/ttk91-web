@@ -34,7 +34,7 @@ class EmulatorWorker {
    */
   resetEmulator (program) {
     this.emulator = this.wasm.create_emulator(program);
-    this.emulator.add_listener('register-change', this.onEvent.bind(this));
+    this.emulator.add_listener('*', this.onEvent.bind(this));
 
     self.postMessage({
       type: 'update_stack_pointer',
@@ -44,6 +44,11 @@ class EmulatorWorker {
     self.postMessage({
       type: 'setRegisters',
       registers: this.emulator.registers(),
+    });
+
+    self.postMessage({
+      type: 'setSymbolTable',
+      symbols: this.emulator.symbol_table(),
     });
   }
 
