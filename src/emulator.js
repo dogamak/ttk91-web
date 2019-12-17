@@ -288,41 +288,18 @@ export class Emulator {
   /**
    * Event handler that is called whenever a register's value changes.
    *
-   * If the changed register is the stack pointer, this invokes a stack update.
-   * The stack update may involve querying information from the emulator and
-   * returns a Promise, which is why this callback is asynchronous.
-   *
    * @param {Object} event - The event object.
    * @param {number} event.register - The index of the changed register.
    * @param {number} event.data - The new value of the register.
-   *
-   * @return {Promise} Promise for awaiting that the store is updated fully.
    */
   @eventHandler('register-change')
   async onRegisterChange ({ register, data }) {
     Vue.set(this.registers, register, data);
-
-    if (register === 7) {
-      await this.updateStack(data)
-    }
   }
 
   @eventHandler('memory-change')
   onMemoryChange({ address, data }) {
     Vue.set(this.memory, address, data);
-  }
-
-  /**
-   * Makes sure the the stack is up to date in the store and makes any neccessary updates.
-   *
-   * @param {number} newStackPointer - The new value of the stack pointer register.
-   *
-   * @return {Promise} Promise for awaiting that the update has been ompleted in full.
-   */
-  async updateStack (newStackPointer) {
-    /*await store.dispatch('updateStack', {
-      address: newStackPointer,
-    });*/
   }
 
   @messageHandler('setSymbolTable')
