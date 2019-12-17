@@ -1,4 +1,4 @@
-<p align="center"><img src="https://u.teknik.io/emHdf.svg" /></p>
+<p align="center"><img src="assets/ttk91web-colored.svg" /></p>
 <p align="center">
   <img src="https://github.com/dogamak/ttk91-web/workflows/Webpack/badge.svg" />
   <a href="https://karhusaari.me/ttk91web/"><img src="https://img.shields.io/badge/-Try%20It!-blue" /></a>
