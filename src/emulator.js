@@ -80,6 +80,8 @@ const eventHandler = callbackRegisteringDecoratorFactory('eventHandler', 'dispat
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/MessageEvent|MessageEvent at MDN}
  */
 
+const STACK_POINTER_REGISTER = 7;
+
 /**
  * An emulator instance running as a separate thread in a web worker.
  */
@@ -105,6 +107,18 @@ export class Emulator {
     Vue.util.defineReactive(this, 'symbols', {});
     Vue.util.defineReactive(this, 'output', []);
     Vue.util.defineReactive(this, 'executionLine', 1);
+
+    this.stackBaseAddress = null;
+
+    Object.defineProperty(this, 'stack', {
+      get: this._stack,
+    });
+
+    Object.defineProperty(this, 'stackPointer', {
+      get () {
+        return this.registers[STACK_POINTER_REGISTER];
+      },
+    });
 
     /*Object.defineProperty(this, 'registers', {
       get () { return this._registers; }
@@ -148,6 +162,16 @@ export class Emulator {
         delete this.memory[address];
       }
     }
+  }
+
+  _stack () {
+    let stack = [];
+
+    for (let addr = this.stackBaseAddress; addr > this.stackPointer; addr--) {
+      stack.push(this.memory[addr]);
+    }
+
+    return stack;
   }
 
   /**
@@ -233,7 +257,7 @@ export class Emulator {
   stop () {
     this.worker.terminate();
     this.worker = new Worker('/ttk91web/worker.js');
-    this.load(store.state.assembly);
+    this.execute(store.state.assembly);
   }
 
   /**
@@ -269,7 +293,12 @@ export class Emulator {
    */
   @messageHandler('setRegisters')
   onSetRegisters ({ registers }) {
-    this.registers = [...registers];
+    for (let i = 1; i < registers.length; i++) {
+      this.onRegisterChange({
+        register: i,
+        data: registers[i],
+      });
+    }
   }
 
   /**
@@ -295,6 +324,11 @@ export class Emulator {
   @eventHandler('register-change')
   async onRegisterChange ({ register, data }) {
     Vue.set(this.registers, register, data);
+
+    if (register === STACK_POINTER_REGISTER && this.stackBaseAddress === null) {
+      this.stackBaseAddress = data;
+      console.log(`SP: ${this.stackPointer}`);
+    }
   }
 
   @eventHandler('memory-change')

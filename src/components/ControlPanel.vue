@@ -4,6 +4,8 @@
     <Registers />
     <h3>Symbols:</h3>
     <SymbolTable />
+    <h3>Stack:</h3>
+    <Stack />
     <h3>Output:</h3>
     <Output />
   </div>
@@ -14,10 +16,11 @@
   import Registers from './Registers.vue';
   import Output from './Output.vue';
   import SymbolTable from './SymbolTable.vue';
+  import Stack from './Stack.vue';
 
   export default {
     name: 'ControlPanel',
-    components: { Registers, Output, SymbolTable },
+    components: { Registers, Output, SymbolTable, Stack },
     methods: {
       leftPad (str, pad, len) {
         while (str.length < len) {

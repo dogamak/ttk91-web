@@ -112,9 +112,10 @@ class EmulatorWorker {
   run () {
     this.halted = false;
 
-    while (!halted) {
-      this.step();
+    while (!this.halted) {
+      let output = this.step();
 
+      console.log(output.calls());
       if (output.calls().indexOf(11) != -1) {
         this.halted = true;
       }
@@ -152,6 +153,8 @@ class EmulatorWorker {
         address: this.emulator.stack_pointer(),
       });
     }
+
+    return output;
   }
 
   /**
