@@ -4,17 +4,22 @@ import store from './store.js';
 export let worker = new Worker('/ttk91web/worker.js');
 
 /**
- * This monstrosity is used to generate the `eventHandler` and `messageHandler` decorators.
- * The first arguments is the name of the property where a list of the listeners should be maintained.
- * The second argument is the name of the generated dispatch method, which is used to send messages
- * to the listeners.
+ * This monstrosity is used to generate the `eventHandler` and `messageHandler`
+ * decorators.  The first arguments is the name of the property where a list of
+ * the listeners should be maintained.  The second argument is the name of the
+ * generated dispatch method, which is used to send messages to the listeners.
  *
- * @param {string} listPropertyName - Name of the class property into which the list of callbacks will be stored.
- * @param {string} dispatchMethodName - Name for a generated method for dispatching messages to the callbacks.
+ * @param {string} listPropertyName - Name of the class property into which the
+ *    list of callbacks will be stored.
+ * @param {string} dispatchMethodName - Name for a generated method for
+ *    dispatching messages to the callbacks.
  *
  * @return {function} A method decorator.
  */
-function callbackRegisteringDecoratorFactory (listPropertyName, dispatchMethodName) {
+function callbackRegisteringDecoratorFactory (
+  listPropertyName,
+  dispatchMethodName,
+) {
   return (messageType) => {
     return (target, name, descriptor) => {
       if (target[dispatchMethodName] === undefined) {
@@ -45,16 +50,24 @@ function callbackRegisteringDecoratorFactory (listPropertyName, dispatchMethodNa
 /**
  * Decorator that registers the method as an message handler.
  *
- * @param {string} name - The name of the message type this method will be called for.
+ * @param {string} name - The name of the message type this method will be
+ * called for.
  */
-const messageHandler = callbackRegisteringDecoratorFactory('messageHandlers', 'dispatchMessage');
+const messageHandler = callbackRegisteringDecoratorFactory(
+  'messageHandlers',
+  'dispatchMessage',
+);
 
 /**
  * Decorator that registers the method as an event handler.
  *
- * @param {string} name - The name of the event type this method will be called for.
+ * @param {string} name - The name of the event type this method will be
+ * called for.
  */
-const eventHandler = callbackRegisteringDecoratorFactory('eventHandler', 'dispatchEvent');
+const eventHandler = callbackRegisteringDecoratorFactory(
+  'eventHandler',
+  'dispatchEvent',
+);
 
 /**
  * A message from the web worker.
@@ -80,12 +93,15 @@ const eventHandler = callbackRegisteringDecoratorFactory('eventHandler', 'dispat
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/MessageEvent|MessageEvent at MDN}
  */
 
+const STACK_POINTER_REGISTER = 7;
+
 /**
  * An emulator instance running as a separate thread in a web worker.
  */
 export class Emulator {
   /**
-   * Spawns a new web worker for the emulator and registers neccessary callbacks to it.
+   * Spawns a new web worker for the emulator and registers neccessary
+   * callbacks to it.
    */
   constructor () {
     this.worker = new Worker('/ttk91web/worker.js');
@@ -100,17 +116,91 @@ export class Emulator {
 
     this.watchers = {};
 
+    /**
+     * Array containing the work registers' values.
+     * @name Emulator#registers
+     * @type {number[]}
+     */
     Vue.util.defineReactive(this, 'registers', [0,0,0,0,0,0,0]);
+
+    /**
+     * Object representing a copy of the Emulator's virtual memory.
+     * Maps memory location addresses into their values.
+     * @name Emulator#memory
+     * @type {Object<number, number>}
+     */
     Vue.util.defineReactive(this, 'memory', {});
+
+    /**
+     * The symbol table of the currently loaded program.
+     * Maps symbol names into memory locations.
+     * @name Emulator#symbols
+     * @type {Object<string, number>}
+     */
     Vue.util.defineReactive(this, 'symbols', {});
+
+    /**
+     * List of all values the program has printed during it's execution.
+     * @name Emulator#output
+     * @type {number[]}
+     */
     Vue.util.defineReactive(this, 'output', []);
+
+    /**
+     * The source code line corresponding to the curren Program Counter.
+     * @name Emulator#executionLine
+     * @type {number}
+     */
     Vue.util.defineReactive(this, 'executionLine', 1);
+
+    /**
+     * Object mapping stack memory addresses into metadata objects.
+     * @type {number}
+     * @name Emulator#stackMetadata
+     * @prop {number} Emulator#stackMetadata.pushedAt -
+     *    The source line number at which the value was pushed into the stack.
+     */
+    Vue.util.defineReactive(this, 'stackMetadata', {});
+
+    /**
+     * Array of stack values.
+     * @type {number[]}
+     * @name Emulator#stack
+     */
+    Vue.util.defineReactive(this, 'stack', []);
+
+    /**
+     * The highgest memory address of the stack.
+     * @type {number}
+     * @name Emulator#stackBaseAddress
+     */
+    Vue.util.defineReactive(this, 'stackBaseAddress', null);
+
+    /**
+     * The memory address of the stack head.
+     * @type {number}
+     * @name Emulator#stackPointer
+     */
+    Object.defineProperty(this, 'stackPointer', {
+      get () {
+        return this.registers[STACK_POINTER_REGISTER];
+      },
+    });
 
     /*Object.defineProperty(this, 'registers', {
       get () { return this._registers; }
     });*/
   }
 
+  /**
+   * Entrypoint for the Vue plugin.
+   *
+   * Defines an immutable `$emulator` property for all Vue components that
+   * points to a single global Emulator instance.
+   *
+   * @param {Vue} vue - The Vue class.
+   * @param {Object} options - Options object passed to `Vue.use`.
+   */
   static install (Vue, options) {
     let emulator = new Emulator();
 
@@ -127,27 +217,31 @@ export class Emulator {
     });
   }
 
-  registerAddressWatcher (watcher, address) {
-    if (!(address in this.watchers))
-      this.watchers[address] = [];
-
-    this.watchers[address].push(watcher);
-  }
-
-  unregisterAddressWatchers (watcher, address) {
-    if (!(address in this.watchers))
-      return;
-
-    let index = this.watchers[address].indexOf(watcher);
-
-    if (index !== -1) {
-      this.watchers[address].splice(index, 1);
-
-      if (this.watchers[address].length === 0) {
-        delete this.watchers[address];
-        delete this.memory[address];
+  /**
+   * Updates our view of the stack on stack pointer changes.
+   * On stack pushes, resolves the pushed values and records
+   * metadata about them (e.g. when they were pushed).
+   * On stack pops, truncates the stack array.
+   * 
+   * @param {number} oldStackPointer - Value of the stack pointer before it
+   *    changed.
+   */
+  updateStack (oldStackPointer) {
+    if (this.stackPointer < oldStackPointer) {
+      for (let addr = oldStackPointer; addr > this.stackPointer; addr--) {
+        this.stack = [...this.stack, this.memory[addr]];
+        Vue.set(this.stackMetadata, addr, {
+          pushedOnLine: this.executionLine,
+        });
+      }
+    } else {
+      for (let addr = oldStackPointer; addr < this.stackPointer; addr++) {
+        console.log('POP!');
+        this.stack.pop();
+        delete this.stackMetadata[addr];
       }
     }
+    console.log(this.stack);
   }
 
   /**
@@ -158,8 +252,9 @@ export class Emulator {
    * @param {boolean} [expectResponse=false] - Whether or not to expect a
    * response from the web worker.
    *
-   * @return {(Promise<Message>|void)} Returns a Promise for receiving the response if
-   * expectResponse parameter is set to true, otherwise does not return a value.
+   * @return {(Promise<Message>|void)} Returns a Promise for receiving the
+   * response if expectResponse parameter is set to true, otherwise does not
+   * return a value.
    */
   postMessage(type, payload, expectResponse) {
     if (arguments.length == 2)
@@ -181,9 +276,11 @@ export class Emulator {
   }
 
   /**
-   * Callback that is invoked every time a message from the web worker is received.
+   * Callback that is invoked every time a message from the web worker is
+   * received.
    *
-   * @param {external:MessageEvent} event - The message event received from the web worker.
+   * @param {external:MessageEvent} event - The message event received from
+   * the web worker.
    *
    * @return {Promise} Promise for awaiting the execution of a message handler.
    */
@@ -233,7 +330,7 @@ export class Emulator {
   stop () {
     this.worker.terminate();
     this.worker = new Worker('/ttk91web/worker.js');
-    this.load(store.state.assembly);
+    this.execute(store.state.assembly);
   }
 
   /**
@@ -248,11 +345,13 @@ export class Emulator {
   }
 
   /**
-   * Message handler that is called every time the emulator has produced more output.
+   * Message handler that is called every time the emulator has produced more
+   * output.
    *
    * @param {Object} message - The message object.
    * @param {number[]} message.registers - State of the emulator's registers.
-   * @param {number[]} message.output - An array containing all numbers printed by the program since it's launch.
+   * @param {number[]} message.output - An array containing all numbers printed
+   *    by the program since it's launch.
    * @param {number} message.line - The current source code line of execution.
    */
   @messageHandler('output')
@@ -269,7 +368,12 @@ export class Emulator {
    */
   @messageHandler('setRegisters')
   onSetRegisters ({ registers }) {
-    this.registers = [...registers];
+    for (let i = 1; i < registers.length; i++) {
+      this.onRegisterChange({
+        register: i,
+        data: registers[i],
+      });
+    }
   }
 
   /**
@@ -277,7 +381,8 @@ export class Emulator {
    * The event is dispatched further to the appropriate event handler.
    *
    * @param {Object} message - The message object.
-   * @param {string} message.kind - The event kind. This determines the invoked event handler.
+   * @param {string} message.kind - The event kind. This determines the invoked
+   *    event handler.
    * @param {Object} message.payload - The event payload.
    */
   @messageHandler('event')
@@ -294,16 +399,44 @@ export class Emulator {
    */
   @eventHandler('register-change')
   async onRegisterChange ({ register, data }) {
+    let old = this.registers[register];
+
     Vue.set(this.registers, register, data);
+
+    if (register === STACK_POINTER_REGISTER) {
+      if (this.stackBaseAddress === null)
+        this.stackBaseAddress = data;
+
+      this.updateStack(old);
+    }
   }
 
+  /**
+   * Event handler that is called every time a memory location changes in
+   * the Emulator's virtual memory.
+   *
+   * Updates the value into {@link Emulator#memory}.
+   * TODO: Do not track changes in which we are not interested in.
+   */
   @eventHandler('memory-change')
   onMemoryChange({ address, data }) {
     Vue.set(this.memory, address, data);
+
+    if (address <= this.stackBaseAddress && address > this.stackPointer) {
+      let i = this.stackBaseAddress - address;
+      Vue.set(this.stack, i, data);
+    }
   }
 
+  /**
+   * Message handler that is called whenever we receive a new symbol table.
+   *
+   * @param {Object} message - The message object.
+   * @param {Object<string, number>} message.symbols - Map from symbol names into
+   *    memory addresses.
+   */
   @messageHandler('setSymbolTable')
-  async onSetSourceMap ({ symbols }) {
+  async onSetSymbolTable ({ symbols }) {
     this.symbols = symbols;
 
     for (let address of Object.values(symbols)) {
