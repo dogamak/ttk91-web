@@ -4,14 +4,17 @@
       <tr>
         <th>Address</th>
         <th>Value</th>
+        <th></th>
       </tr>
-      <tr v-if="$emulator.stack.length === 0">
+      <tr v-if="$emulator.stackBaseAddress == $emulator.stackPointer">
         <td></td>
         <td></td>
+        <td></td>
       </tr>
-      <tr v-for="(value, offset) in $emulator.stack">
-        <td>{{ $emulator.stackBaseAddress - offset }}</td>
-        <td>{{ value }}</td>
+      <tr v-for="entry in stack">
+        <td>{{ entry.address }}</td>
+        <td>{{ entry.value }}</td>
+        <td>Pushed at line {{ entry.pushedAt }}</td>
       </tr>
     </table>
   </div>
@@ -20,6 +23,25 @@
 <script>
   export default {
     name: 'Stack',
+
+    computed: {
+      stack () {
+        let result = [];
+
+        console.log(`$emulator.stack.length: ${this.$emulator.stack.length}`);
+        for (let i = 0; i < this.$emulator.stack.length; i++) {
+          let address = this.$emulator.stackBaseAddress - i;
+
+          result.push({
+            address,
+            value: this.$emulator.stack[i],
+            pushedAt: this.$emulator.stackMetadata[address].pushedOnLine,
+          });
+        }
+
+        return result;
+      },
+    },
   };
 </script>
 
@@ -53,6 +75,7 @@
 
       td {
         background-color: white;
+        text-align: left;
       }
     }
   }

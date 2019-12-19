@@ -2,10 +2,13 @@
   <div class="control-panel">
     <h3>Registers:</h3>
     <Registers />
+
     <h3>Symbols:</h3>
     <SymbolTable />
+
     <h3>Stack:</h3>
     <Stack />
+
     <h3>Output:</h3>
     <Output />
   </div>
