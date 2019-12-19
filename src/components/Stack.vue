@@ -28,7 +28,6 @@
       stack () {
         let result = [];
 
-        console.log(`$emulator.stack.length: ${this.$emulator.stack.length}`);
         for (let i = 0; i < this.$emulator.stack.length; i++) {
           let address = this.$emulator.stackBaseAddress - i;
 

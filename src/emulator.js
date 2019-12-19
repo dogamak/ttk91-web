@@ -421,6 +421,11 @@ export class Emulator {
   @eventHandler('memory-change')
   onMemoryChange({ address, data }) {
     Vue.set(this.memory, address, data);
+
+    if (address <= this.stackBaseAddress && address > this.stackPointer) {
+      let i = this.stackBaseAddress - address;
+      Vue.set(this.stack, i, data);
+    }
   }
 
   /**
