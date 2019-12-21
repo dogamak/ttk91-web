@@ -1,3 +1,11 @@
+import {
+  UPDATE_STACK_POINTER_MESSAGE,
+  SET_REGISTERS_MESSAGE,
+  SET_SYMBOL_TABLE_MESSAGE,
+  EVENT_MESSAGE,
+  OUTPUT_MESSAGE,
+} from './messages.js';
+
 /**
  * @external {ttk91wasm}
  *
@@ -25,6 +33,19 @@ class EmulatorWorker {
     self.addEventListener('message', this.onMessage.bind(this));
   }
 
+  postMessage (message, payload) {
+    let type = message;
+
+    if (typeof type === 'object') {
+      type = message.name;
+    }
+
+    self.postMessage({
+      type,
+      ... payload,
+    });
+  }
+
   /**
    * Reset emulator by creating a new instance.
    *
@@ -36,18 +57,15 @@ class EmulatorWorker {
     this.emulator = this.wasm.create_emulator(program);
     this.emulator.add_listener('*', this.onEvent.bind(this));
 
-    self.postMessage({
-      type: 'update_stack_pointer',
+    this.postMessage(UPDATE_STACK_POINTER_MESSAGE, {
       address: this.emulator.stack_pointer(),
     });
 
-    self.postMessage({
-      type: 'setRegisters',
+    this.postMessage(SET_REGISTERS_MESSAGE, {
       registers: this.emulator.registers(),
     });
 
-    self.postMessage({
-      type: 'setSymbolTable',
+    this.postMessage(SET_SYMBOL_TABLE_MESSAGE, {
       symbols: this.emulator.symbol_table(),
     });
   }
@@ -68,7 +86,7 @@ class EmulatorWorker {
     if (result === undefined)
       return;
 
-    self.postMessage({
+    this.postMessage({
       id: evt.data.id,
       payload: result,
     });
@@ -82,8 +100,7 @@ class EmulatorWorker {
    * @param {Object} event.payload - The event payload whose schema depends on the event type.
    */
   onEvent ({ type, payload }) {
-    self.postMessage({
-      type: 'event',
+    this.postMessage(EVENT_MESSAGE, {
       kind: type,
       payload,
     });
@@ -140,16 +157,14 @@ class EmulatorWorker {
     let old_sp = this.emulator.stack_pointer();
     let output = this.emulator.step();
 
-    self.postMessage({
-      type: 'output',
+    this.postMessage(OUTPUT_MESSAGE, {
       output: output.output(),
       registers: this.emulator.registers(),
       line: output.line,
     });
 
     if (old_sp != this.emulator.stack_pointer()) {
-      self.postMessage({
-        type: 'update_stack_pointer',
+      this.postMessage(UPDATE_STACK_POINTER_MESSAGE, {
         address: this.emulator.stack_pointer(),
       });
     }

@@ -13,7 +13,7 @@
       </tr>
       <tr v-for="entry in stack">
         <td>{{ entry.address }}</td>
-        <td>{{ entry.value }}</td>
+        <td><Value :value="entry.value" /></td>
         <td>Pushed at line {{ entry.pushedAt }}</td>
       </tr>
     </table>
@@ -21,8 +21,12 @@
 </template>
 
 <script>
+  import Value from './Value.vue';
+
   export default {
     name: 'Stack',
+
+    components: { Value },
 
     computed: {
       stack () {
@@ -34,7 +38,7 @@
           result.push({
             address,
             value: this.$emulator.stack[i],
-            pushedAt: this.$emulator.stackMetadata[address].pushedOnLine,
+            pushedAt: (this.$emulator.stackMetadata[address] || {}).pushedOnLine,
           });
         }
 

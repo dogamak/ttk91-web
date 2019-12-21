@@ -22,6 +22,17 @@
   export default {
     name: 'SymbolTable',
 
+    data () {
+      return {
+        watcher: this.$emulator.getWatcher(),
+      };
+    },
+
+    watched: {
+      computed (symbols) {
+      },
+    },
+
     computed: {
       /**
        * @typedef {Object} Symbol
@@ -38,11 +49,12 @@
         let res = Object.keys(this.$emulator.symbols)
           .map((label) => {
             let address = this.$emulator.symbols[label];
+            this.watcher.watch(address);
 
             return {
               name: label,
               address,
-              value: this.$emulator.memory[address],
+              value: this.watcher.addresses[address],
             };
           });
 

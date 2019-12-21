@@ -87,6 +87,7 @@
     height: 100%;
     border-right: 1px solid #d5d5d5;
     color: #495057;
+    z-index: -1;
   }
 
   .execution-line {

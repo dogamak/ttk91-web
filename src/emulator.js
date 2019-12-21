@@ -1,7 +1,27 @@
 import Vue from 'vue';
 import Vuex from 'vuex';
 import store from './store.js';
-export let worker = new Worker('/ttk91web/worker.js');
+
+import { Dispatcher, scopedListener } from './listener.js';
+import {
+  MESSAGE_NAMESPACE,
+  EVENT_NAMESPACE,
+  MEMORY_CHANGE_EVENT,
+  REGISTER_CHANGE_EVENT,
+  SET_REGISTERS_MESSAGE,
+  SET_SYMBOL_TABLE_MESSAGE,
+  OUTPUT_MESSAGE,
+  EVENT_MESSAGE,
+} from './messages.js';
+
+import { Many } from '@/utils.js';
+
+const MessageListener = scopedListener(MESSAGE_NAMESPACE);
+const EventListener = scopedListener(EVENT_NAMESPACE);
+
+console.log(EventListener);
+
+let worker = new Worker('/ttk91web/worker.js');
 
 /**
  * This monstrosity is used to generate the `eventHandler` and `messageHandler`
@@ -15,7 +35,6 @@ export let worker = new Worker('/ttk91web/worker.js');
  *    dispatching messages to the callbacks.
  *
  * @return {function} A method decorator.
- */
 function callbackRegisteringDecoratorFactory (
   listPropertyName,
   dispatchMethodName,
@@ -45,29 +64,7 @@ function callbackRegisteringDecoratorFactory (
       listeners.push(descriptor.value);
     };
   }
-}
-
-/**
- * Decorator that registers the method as an message handler.
- *
- * @param {string} name - The name of the message type this method will be
- * called for.
- */
-const messageHandler = callbackRegisteringDecoratorFactory(
-  'messageHandlers',
-  'dispatchMessage',
-);
-
-/**
- * Decorator that registers the method as an event handler.
- *
- * @param {string} name - The name of the event type this method will be
- * called for.
- */
-const eventHandler = callbackRegisteringDecoratorFactory(
-  'eventHandler',
-  'dispatchEvent',
-);
+}*/
 
 /**
  * A message from the web worker.
@@ -95,15 +92,40 @@ const eventHandler = callbackRegisteringDecoratorFactory(
 
 const STACK_POINTER_REGISTER = 7;
 
+class MemoryWatcher extends EventListener {
+  constructor (emulator) {
+    super();
+    this.emulator = emulator;
+    Vue.util.defineReactive(this, 'addresses', {});
+  }
+
+  watch (address) {
+    Vue.set(this.addresses, address, this.emulator.memory[address]);
+  }
+  
+  unwatch (address) {
+    Vue.set(this.addresses, address, undefined);
+  }
+
+  @EventListener.handler(MEMORY_CHANGE_EVENT)
+  onMemoryChange ({ address, value }) {
+    if (address in this.addresses) {
+      Vue.set(this.addresses, address, value);
+    }
+  }
+}
+
 /**
  * An emulator instance running as a separate thread in a web worker.
  */
-export class Emulator {
+export class Emulator extends Many(Dispatcher, EventListener, MessageListener) {
   /**
    * Spawns a new web worker for the emulator and registers neccessary
    * callbacks to it.
    */
   constructor () {
+    super();
+
     this.worker = new Worker('/ttk91web/worker.js');
 
     this.messageId = 0;
@@ -115,6 +137,8 @@ export class Emulator {
     this.output = [];
 
     this.watchers = {};
+
+    this.register({ name: '*', namespace: '*' }, this);
 
     /**
      * Array containing the work registers' values.
@@ -186,10 +210,6 @@ export class Emulator {
         return this.registers[STACK_POINTER_REGISTER];
       },
     });
-
-    /*Object.defineProperty(this, 'registers', {
-      get () { return this._registers; }
-    });*/
   }
 
   /**
@@ -215,6 +235,26 @@ export class Emulator {
         });
       },
     });
+  }
+
+  getWatcher () {
+    let watcher = new MemoryWatcher(this);
+    this.register(MEMORY_CHANGE_EVENT, watcher);
+    return watcher;
+  }
+
+  /**
+   * Register a wathcer for a memory location.
+   */
+  watchAddress (address, watcher) {
+    let watcherId = hyperid();
+    this.watchers.set(watcherId, watcher);
+    
+    if (address in this.locationWatchers) {
+      this.locationWatchers[address].push(watcher)
+    } else {
+      this.locationWatchers[address] = [watcher];
+    }
   }
 
   /**
@@ -292,8 +332,10 @@ export class Emulator {
         promise.resolve(data);
       }
     } else {
-      console.log(data);
-      this.dispatchMessage(data.type, data);
+      this.dispatch({
+        namespace: MESSAGE_NAMESPACE,
+        name: data.type
+      }, data);
     }
   }
 
@@ -354,7 +396,7 @@ export class Emulator {
    *    by the program since it's launch.
    * @param {number} message.line - The current source code line of execution.
    */
-  @messageHandler('output')
+  @MessageListener.handler(OUTPUT_MESSAGE)
   onOutput ({ registers, output, line }) {
     this.output = output;
     this.executionLine = line;
@@ -366,7 +408,7 @@ export class Emulator {
    * @param {Object} message - The message object.
    * @param {number[]} message.registers - New values for all registers.
    */
-  @messageHandler('setRegisters')
+  @MessageListener.handler(SET_REGISTERS_MESSAGE)
   onSetRegisters ({ registers }) {
     for (let i = 1; i < registers.length; i++) {
       this.onRegisterChange({
@@ -385,9 +427,9 @@ export class Emulator {
    *    event handler.
    * @param {Object} message.payload - The event payload.
    */
-  @messageHandler('event')
+  @MessageListener.handler(EVENT_MESSAGE)
   async onEmulatorEvent ({ kind, payload }) {
-    await this.dispatchEvent(kind, payload);
+    this.dispatch({ namespace: EVENT_NAMESPACE, name: kind }, payload);
   }
 
   /**
@@ -397,8 +439,9 @@ export class Emulator {
    * @param {number} event.register - The index of the changed register.
    * @param {number} event.data - The new value of the register.
    */
-  @eventHandler('register-change')
-  async onRegisterChange ({ register, data }) {
+  @EventListener.handler(REGISTER_CHANGE_EVENT)
+  onRegisterChange ({ register, data }) {
+    console.log(`Register R${register} = ${data}.`);
     let old = this.registers[register];
 
     Vue.set(this.registers, register, data);
@@ -418,7 +461,7 @@ export class Emulator {
    * Updates the value into {@link Emulator#memory}.
    * TODO: Do not track changes in which we are not interested in.
    */
-  @eventHandler('memory-change')
+  @EventListener.handler(MEMORY_CHANGE_EVENT)
   onMemoryChange({ address, data }) {
     Vue.set(this.memory, address, data);
 
@@ -435,7 +478,7 @@ export class Emulator {
    * @param {Object<string, number>} message.symbols - Map from symbol names into
    *    memory addresses.
    */
-  @messageHandler('setSymbolTable')
+  @MessageListener.handler(SET_SYMBOL_TABLE_MESSAGE)
   async onSetSymbolTable ({ symbols }) {
     this.symbols = symbols;
 
