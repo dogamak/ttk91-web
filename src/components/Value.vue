@@ -1,7 +1,11 @@
 <template>
   <div class="value">
-    <span>{{ formated(format) }}</span>
-    <div class="popup">
+    <span
+      @mouseover="onMouseOver"
+      @mouseout="onMouseOut">
+      {{ formated(format) }}
+    </span>
+    <div class="popup" :class="{ visible: popupVisible }">
       <table>
         <tr>
           <th>Decimal</th>
@@ -31,6 +35,8 @@
     data () {
       return {
         watcher: this.$emulator.getWatcher(),
+        hoverTimeout: null,
+        popupVisible: false,
       };
     },
 
@@ -60,6 +66,24 @@
           return this.value.toString(2);
         }
       },
+
+      onMouseOver () {
+        this.hoverTimeout = setTimeout(this.showPopup.bind(this), 200);
+      },
+
+      onMouseOut () {
+        clearTimeout(this.hoverTimeout);
+      },
+
+      showPopup () {
+        this.popupVisible = true;
+        document.addEventListener('mousemove', (evt) => {
+          if (!this.$el.contains(evt.target)) {
+            this.popupVisible = false;
+            clearTimeout(this.hoverTimeout);
+          }
+        });
+      },
     },
   };
 </script>
@@ -85,31 +109,46 @@
       padding: 0.5em;
       box-shadow: 0px 3px 10px -5px rgba(0,0,0,0.2);
 
-      background-image: linear-gradient(to bottom right, $oc-gray-2 0%, $oc-gray-3 100%);
+      &.visible {
+        display: block;
+      }
+
+      /* background-image: linear-gradient(to bottom right, $oc-gray-2 0%, $oc-gray-3 100%); */
+      background-color: white;
       border-radius: 3px;
-      border: 1px solid $oc-gray-3;
+      border: 1px solid $oc-gray-4;
 
       &::before {
         content: '';
         width: 0;
         height: 0;
-        border-width: 5px;
+        border-width: 10px;
         border-style: solid;
         border-color: transparent;
         border-bottom-color: $oc-gray-4;
         position: absolute;
-        top: -10px;
+        top: -18px;
         left: 50%;
-        margin-left: -5px;
+        margin-left: -10px;
+      }
+
+      &::after {
+        content: '';
+        width: 0;
+        height: 0;
+        border-width: 8px;
+        border-style: solid;
+        border-color: transparent;
+        border-bottom-color: white;
+        position: absolute;
+        top: -14px;
+        left: 50%;
+        margin-left: -9px;
       }
 
       th {
         text-align: left;
       }
-    }
-
-    &:hover .popup {
-      display: block;
     }
   }
 </style>
