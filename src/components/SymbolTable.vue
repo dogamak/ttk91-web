@@ -6,32 +6,29 @@
         <th>Address</th>
         <th>Value</th>
       </tr>
-      <tr v-for="symbol in symbols">
+      <tr v-for="symbol in symbols" :key="symbol.name">
         <td>{{ symbol.name }}</td>
         <td>{{ symbol.address }}</td>
-        <td>{{ symbol.value }}</td>
+        <td><Value :address="symbol.address" /></td>
+      </tr>
+      <tr v-if="symbols.length === 0">
+        <td></td>
+        <td></td>
       </tr>
     </table>
   </div>
 </template>
 
 <script>
+  import Value from './Value.vue';
+
   /**
    * Table that displays all symbols, their addresses and values.
    */
   export default {
     name: 'SymbolTable',
 
-    data () {
-      return {
-        watcher: this.$emulator.getWatcher(),
-      };
-    },
-
-    watched: {
-      computed (symbols) {
-      },
-    },
+    components: { Value },
 
     computed: {
       /**
@@ -49,17 +46,12 @@
         let res = Object.keys(this.$emulator.symbols)
           .map((label) => {
             let address = this.$emulator.symbols[label];
-            this.watcher.watch(address);
 
             return {
               name: label,
               address,
-              value: this.watcher.addresses[address],
             };
           });
-
-        if (res.length === 0)
-          return [{}];
 
         return res;
       },

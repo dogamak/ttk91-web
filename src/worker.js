@@ -4,6 +4,8 @@ import {
   SET_SYMBOL_TABLE_MESSAGE,
   EVENT_MESSAGE,
   OUTPUT_MESSAGE,
+  ADDRESS_RESPONSE_MESSAGE,
+  ADDRESS_QUERY_MESSAGE,
 } from './messages.js';
 
 /**
@@ -81,15 +83,14 @@ class EmulatorWorker {
     if (method === undefined)
       return;
 
-    let result = method(evt.data.payload);
+    let respond = (event, payload) => {
+      this.postMessage(event, {
+        id: evt.data.id,
+        payload,
+      });
+    };
 
-    if (result === undefined)
-      return;
-
-    this.postMessage({
-      id: evt.data.id,
-      payload: result,
-    });
+    method(evt.data.payload, respond);
   }
 
   /**
@@ -116,7 +117,6 @@ class EmulatorWorker {
    * @param {string} message.program - The program source code.
    */
   load ({ program }) {
-    console.log(program);
     this.resetEmulator(program);
   }
 
@@ -132,7 +132,6 @@ class EmulatorWorker {
     while (!this.halted) {
       let output = this.step();
 
-      console.log(output.calls());
       if (output.calls().indexOf(11) != -1) {
         this.halted = true;
       }
@@ -181,11 +180,16 @@ class EmulatorWorker {
    * @param {Object} message - The message object.
    * @param {number} message.address - The address of the memory location.
    */
-  readAddress ({ address }) {
+  readAddress ({ address }, respond) {
     let value = this.emulator.read_address(address);
 
-    return { address, value };
+    respond(ADDRESS_RESPONSE_MESSAGE, { address, value });
   }
+
+  /**
+   *
+   */
+  getSourceLine() {}
 }
 
 import('ttk91').then((wasm) => {

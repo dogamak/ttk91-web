@@ -3,16 +3,19 @@
     <table>
       <tr>
         <th></th>
-        <th>Value</th>
-        <th></th>
+        <th>Decimal</th>
+        <th>Hex</th>
+        <th>References</th>
       </tr>
       <tr v-for="register in registers">
         <th>{{register.name}}</th>
-        <td><Value :value="register.value" /></td>
-        <td v-if="watcher.addresses[register.value] !== undefined" style="text-align: left">
-          References: <Value :value="watcher.addresses[register.value]" />
-        </td>
-        <td v-else>
+        <td><Value :value="register.value" format="decimal"/></td>
+        <td><Value :value="register.value" format="hexadecimal"/></td>
+        <td style="text-align: left">
+          <Value
+            v-show="watcher.addresses[register.value] !== undefined"
+            format="hexadecimal"
+            :value="watcher.addresses[register.value]" />
         </td>
       </tr>
     </table>

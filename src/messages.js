@@ -36,3 +36,13 @@ export const UPDATE_STACK_POINTER_MESSAGE = {
   namespace: MESSAGE_NAMESPACE,
   name: 'updateStackPointer',
 };
+
+export const ADDRESS_RESPONSE_MESSAGE = {
+  namespace: MESSAGE_NAMESPACE,
+  name: 'addressResponse',
+};
+
+export const ADDRESS_QUERY_MESSAGE = {
+  namespace: MESSAGE_NAMESPACE,
+  name: 'addressQuery',
+};

@@ -42,13 +42,11 @@
 
     methods: {
       parse() {
-        console.log(this.editor.getValue());
 
         try {
           let result = ttk91.parse(this.editor.getValue());
           this.editor.getSession().setAnnotations([]);
         } catch (e) {
-          console.log(e);
           this.editor.getSession()
             .setAnnotations([{
               row: e.line-1,
@@ -70,8 +68,6 @@
       executionLine (newValue, oldValue) {
         let session = this.editor.getSession();
 
-        console.log(this.executionLineMarkerID);
-        console.log(newValue);
         session.removeMarker(this.executionLineMarkerID);
 
         this.executionLineMarkerID =

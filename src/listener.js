@@ -80,10 +80,8 @@ export class Dispatcher {
       ... this.getListeners({ namespace: '*', name: '*' }),
     ];
 
-    console.log(`Dispatch ${namespace}.${name} to ${handlers.length} listeners:`, payload);
 
     for (let handler of handlers) {
-      console.log(handler);
       handler._onEvent({namespace, name}, payload);
     }
   }
@@ -96,8 +94,6 @@ export class Listener {
   }
 
   _onEvent ({ namespace, name }, payload) {
-    console.log(`Dispatch ${namespace}.${name}:`, payload);
-    console.log(this._handlers);
 
     let events = this._handlers[namespace];
 
@@ -109,7 +105,6 @@ export class Listener {
     if (handlers === undefined)
       return;
 
-    console.log(handlers);
 
     for (let handler of handlers) {
       handler.call(this, payload);
@@ -169,9 +164,6 @@ export function scopedListener(namespace) {
   ScopedListener.handler = function (event) {
     return Listener.handler(toEventDescriptor(event, namespace));
   };
-
-  console.log(ScopedListener.prototype);
-  console.log(Listener.prototype);
 
   return ScopedListener;
 }

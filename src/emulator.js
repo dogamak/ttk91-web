@@ -19,7 +19,6 @@ import { Many } from '@/utils.js';
 const MessageListener = scopedListener(MESSAGE_NAMESPACE);
 const EventListener = scopedListener(EVENT_NAMESPACE);
 
-console.log(EventListener);
 
 let worker = new Worker('/ttk91web/worker.js');
 
@@ -99,12 +98,18 @@ class MemoryWatcher extends EventListener {
     Vue.util.defineReactive(this, 'addresses', {});
   }
 
-  watch (address) {
+  async watch (address) {
+    await this.emulator.refreshAddress(address);
     Vue.set(this.addresses, address, this.emulator.memory[address]);
   }
   
   unwatch (address) {
     Vue.set(this.addresses, address, undefined);
+  }
+
+  destroy () {
+    this.emulator.unregister(MEMORY_CHANGE_EVENT, this);
+    this.adresses = {};
   }
 
   @EventListener.handler(MEMORY_CHANGE_EVENT)
@@ -237,6 +242,16 @@ export class Emulator extends Many(Dispatcher, EventListener, MessageListener) {
     });
   }
 
+  async refreshAddress (address) {
+    if (this.memory[address] === undefined) {
+      //console.log(address);
+      //this.memory[address] = null;
+      let response = await this.readAddress(address);
+      //this.memory[address] = response.payload.value;
+      Vue.set(this.memory, address, response.payload.value);
+    }
+  }
+
   getWatcher () {
     let watcher = new MemoryWatcher(this);
     this.register(MEMORY_CHANGE_EVENT, watcher);
@@ -276,12 +291,10 @@ export class Emulator extends Many(Dispatcher, EventListener, MessageListener) {
       }
     } else {
       for (let addr = oldStackPointer; addr < this.stackPointer; addr++) {
-        console.log('POP!');
         this.stack.pop();
         delete this.stackMetadata[addr];
       }
     }
-    console.log(this.stack);
   }
 
   /**
@@ -346,7 +359,7 @@ export class Emulator extends Many(Dispatcher, EventListener, MessageListener) {
    */
   execute (program) {
     this.postMessage('load', { program });
-    this.memory = [];
+    this.memory = {};
     this.registers = [0, 0, 0, 0, 0, 0, 0];
     this.symbols = {};
   }
@@ -441,7 +454,6 @@ export class Emulator extends Many(Dispatcher, EventListener, MessageListener) {
    */
   @EventListener.handler(REGISTER_CHANGE_EVENT)
   onRegisterChange ({ register, data }) {
-    console.log(`Register R${register} = ${data}.`);
     let old = this.registers[register];
 
     Vue.set(this.registers, register, data);
@@ -484,7 +496,6 @@ export class Emulator extends Many(Dispatcher, EventListener, MessageListener) {
 
     for (let address of Object.values(symbols)) {
       let res = await this.readAddress(address);
-      console.log(address, res);
       Vue.set(this.memory, address, res.payload.value);
     }
   }
