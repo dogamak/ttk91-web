@@ -100,11 +100,11 @@
       /**
        * If a pointer has multiple levels of indirection, we can show popups for the
        * values inside other popups. This property sets the maximum depth of nested
-       * popups. Defaults to 0 for performance reasons.
+       * popups. Defaults to 1 for performance reasons.
        */
       depth: {
         type: Number,
-        default: 0,
+        default: 1,
       },
 
       /**
