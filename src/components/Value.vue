@@ -2,6 +2,7 @@
   <div class="value">
     <span
       class="no-wrap"
+      :class="{ active: popupVisible }"
       @mouseover="onMouseOver"
       @mouseout="onMouseOut">
       {{ formated(format) }}
@@ -307,6 +308,14 @@
     span {
       font-family: monospace;
       font-size: 1rem;
+      padding: 0 0.2em;
+      cursor: help;
+
+      &:hover, &.active {
+        border-radius: 3px;
+        background: $oc-red-4;
+        color: white;
+      }
     }
 
     .popup-spacer {
