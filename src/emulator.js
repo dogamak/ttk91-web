@@ -12,6 +12,7 @@ import {
   SET_SYMBOL_TABLE_MESSAGE,
   OUTPUT_MESSAGE,
   EVENT_MESSAGE,
+  SET_SOURCE_MAP_MESSAGE,
 } from './messages.js';
 
 import { Many } from '@/utils.js';
@@ -230,11 +231,20 @@ export class Emulator extends Many(Dispatcher, EventListener, MessageListener) {
     Vue.util.defineReactive(this, 'stack', []);
 
     /**
-     * The highgest memory address of the stack.
+     * The highest memory address of the stack.
      * @type {number}
      * @name Emulator#stackBaseAddress
      */
     Vue.util.defineReactive(this, 'stackBaseAddress', null);
+
+    /**
+     * Map object that associates memory locations with the source code lines number
+     * in which that location was defined.
+     *
+     * @type {SourceMap}
+     * @name Emulator#sourceMap
+     */
+    Vue.util.defineReactive(this, 'sourceMap', {});
 
     /**
      * The memory address of the stack head.
@@ -537,6 +547,18 @@ export class Emulator extends Many(Dispatcher, EventListener, MessageListener) {
       let res = await this.readAddress(address);
       Vue.set(this.memory, address, res.payload.value);
     }
+  }
+
+  /**
+   * Message handler that updates the value of {@link Emulator.sourceMap} whenever
+   * the worker sends a new source map.
+   *
+   * @listens module:Messages~event:SetSourceMapMessage
+   * @param {module:Messages~event:SetSourceMapMessage}
+   */
+  @MessageListener.handler(SET_SOURCE_MAP_MESSAGE)
+  onSetSourceMap({ sourceMap }) {
+    this.sourceMap = sourceMap;
   }
 }
 

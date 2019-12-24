@@ -6,6 +6,7 @@ import {
   OUTPUT_MESSAGE,
   ADDRESS_RESPONSE_MESSAGE,
   ADDRESS_QUERY_MESSAGE,
+  SET_SOURCE_MAP_MESSAGE,
 } from './messages.js';
 
 /**
@@ -69,6 +70,10 @@ class EmulatorWorker {
 
     this.postMessage(SET_SYMBOL_TABLE_MESSAGE, {
       symbols: this.emulator.symbol_table(),
+    });
+
+    this.postMessage(SET_SOURCE_MAP_MESSAGE, {
+      sourceMap: this.emulator.source_map(),
     });
   }
 
@@ -185,11 +190,6 @@ class EmulatorWorker {
 
     respond(ADDRESS_RESPONSE_MESSAGE, { address, value });
   }
-
-  /**
-   *
-   */
-  getSourceLine() {}
 }
 
 import('ttk91').then((wasm) => {

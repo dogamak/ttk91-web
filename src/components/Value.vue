@@ -38,13 +38,20 @@
             </td>
           </tr>
         </table>
-        <a href="#">Jump To »</a>
+        <a
+          v-if="$emulator.sourceMap[computedValue]"
+          href="#"
+          @click="jumpToDefinition">
+          Jump To »
+        </a>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+  import EventBus from '../bus.js';
+
   /**
    * Component for displaying a numerical value or an address.
    * Shows an informational tooltip when hovered which contains
@@ -295,6 +302,13 @@
             clearTimeout(this.hoverTimeout);
           }
         });
+      },
+
+      jumpToDefinition() {
+        EventBus.$emit(
+          'editor-set-line',
+          this.$emulator.sourceMap[this.computedValue],
+        );
       },
     },
   };

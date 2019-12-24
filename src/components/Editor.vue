@@ -5,6 +5,7 @@
 <script>
   import ace from 'ace-builds';
   import * as ttk91 from '@dogamak/ttk91-wasm';
+  import EventBus from '../bus.js';
 
   ace.config.set('basePath', '/ttk91web');
 
@@ -20,6 +21,12 @@
         editTimer: null,
         executionLineMarkerID: null,
 	    };
+    },
+
+    created() {
+      EventBus.$on('editor-set-line', (line) => {
+        this.editor.gotoLine(line);
+      });
     },
 
     mounted () {

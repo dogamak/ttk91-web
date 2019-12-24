@@ -168,3 +168,24 @@ export const ADDRESS_QUERY_MESSAGE = {
  * @prop {number} address - Address of the memory location whose value
  *    is being queried.
  */
+
+/**
+ * @type {module:Messages~EventDescriptor<module:Messages~event:SetSourceMapMessage>}
+ */
+export const SET_SOURCE_MAP_MESSAGE = {
+  namespace: MESSAGE_NAMESPACE,
+  name: 'setSourceMap',
+};
+
+/**
+ * Map object that associates memory location with source code line numbers.
+ *
+ * @typedef {Object<Number, Number>} SourceMap
+ */
+
+/**
+ * Message sent by the worker whenever the source map updates.
+ *
+ * @event module:Messages~SetSourceMapMessage
+ * @prop {SourceMap} sourceMap - The updated source map.
+ */
