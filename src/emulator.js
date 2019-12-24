@@ -81,6 +81,14 @@ class MemoryWatcher extends EventListener {
     this.emulator.register(MEMORY_CHANGE_EVENT, this);
 
     /**
+     * List of watched memory locations.
+     *
+     * @name MemoryWatcher@watched
+     * @type {number[]}
+     */
+    Vue.util.defineReactive(this, 'watched', []);
+
+    /**
      * Map that contains the watched memory addresses end their values.
      * This map is updated automatically and is reactive when used in Vue
      * components.
@@ -101,8 +109,9 @@ class MemoryWatcher extends EventListener {
    *    added into {@link MemoryWatcher#addresses} and kept up-to-date.
    * @return {Promise}
    */
-  async watch (address) {
+  async watch (address, a) {
     await this.emulator.refreshAddress(address);
+    this.watched.push(address);
     Vue.set(this.addresses, address, this.emulator.memory[address]);
   }
   
@@ -112,6 +121,13 @@ class MemoryWatcher extends EventListener {
    * @param {number} address - Address of the memory location.
    */
   unwatch (address) {
+    const i = this.watched.indexOf(address);
+
+    if (i === -1) {
+      return;
+    }
+
+    this.watched.splice(i, 1);
     Vue.set(this.addresses, address, undefined);
   }
 
@@ -135,7 +151,7 @@ class MemoryWatcher extends EventListener {
    */
   @EventListener.handler(MEMORY_CHANGE_EVENT)
   onMemoryChange ({ address, value }) {
-    if (address in this.addresses) {
+    if (this.watched.indexOf(address) !== -1) {
       Vue.set(this.addresses, address, value);
     }
   }
@@ -296,10 +312,7 @@ export class Emulator extends Many(Dispatcher, EventListener, MessageListener) {
    */
   async refreshAddress (address) {
     if (this.memory[address] === undefined) {
-      //console.log(address);
-      //this.memory[address] = null;
       let response = await this.readAddress(address);
-      //this.memory[address] = response.payload.value;
       Vue.set(this.memory, address, response.payload.value);
     }
   }

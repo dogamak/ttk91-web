@@ -8,49 +8,21 @@
       {{ formated(format) }}
     </span>
     <div
+      v-if="hovered"
       :class="{ visible: popupVisible }"
       class="popup-spacer">
       <div
         class="popup"
         ref="popup"
         :style="{ transform: 'translateX('+offsetX+'px)' }">
-        <table>
-          <tr>
-            <th>Decimal</th>
-            <td class="no-wrap">{{ formated('decimal') }}</td>
-          </tr>
-          <tr>
-            <th>Hexadecimal</th>
-            <td>{{ formated('hexadecimal') }}</td>
-          </tr>
-          <tr>
-            <th>Binary</th>
-            <td>{{ formated('binary') }}</td>
-          </tr>
-          <tr
-            v-show="typeof watcher.addresses[computedValue] === 'number'"
-            v-if="depth > 0">
-            <th>References</th>
-            <td>
-              <Value
-                :value="watcher.addresses[computedValue]"
-                :depth="depth-1" />
-            </td>
-          </tr>
-        </table>
-        <a
-          v-if="$emulator.sourceMap[computedValue]"
-          href="#"
-          @click="jumpToDefinition">
-          Jump To »
-        </a>
+        <ValuePopup :value="computedValue" />
       </div>
     </div>
   </div>
 </template>
 
 <script>
-  import EventBus from '../bus.js';
+  import ValuePopup from './ValuePopup.vue';
 
   /**
    * Component for displaying a numerical value or an address.
@@ -61,8 +33,13 @@
   export default {
     name: 'Value',
 
+    components: { ValuePopup },
+
     data () {
       return {
+        log: [],
+        hovered: false,
+
         /**
          * @name watcher
          * @type {MemoryWatcher}
@@ -107,11 +84,11 @@
       /**
        * If a pointer has multiple levels of indirection, we can show popups for the
        * values inside other popups. This property sets the maximum depth of nested
-       * popups. Defaults to 1 for performance reasons.
+       * popups.
        */
       depth: {
         type: Number,
-        default: 1,
+        default: Infinity,
       },
 
       /**
@@ -145,13 +122,17 @@
       /**
        * Updates the watched address whenever the {@link Value#value} prop updates.
        */
-      value: {
+      /*value: {
         immediate: true,
         async handler (newValue, oldValue) {
-          this.watcher.unwatch(oldValue);
+          if (oldValue !== null) {
+            //this.watcher.unwatch(oldValue);
+          }
+
+          this.log.push([oldValue, newValue]);
           await this.watcher.watch(newValue);
         },
-      },
+      },*/
 
       /**
        * Updates the watched addresses whenever the {@link Value#address} prop updates.
@@ -173,21 +154,18 @@
       /**
        * Updates the watcher for the referenced value whenever the pointer changes.
        */
-      'watcher.addresses': {
+      /*'watcher.addresses': {
         immediate: true,
         async handler (newAddresses, oldAddresses) {
-          if (typeof this.value !== 'number')
-            return;
+          if (this.address !== undefined) {
+            if (oldAddresses !== undefined) {
+              //await this.watcher.unwatch(oldAddresses[this.address]);
+            }
 
-          if (typeof this.address !== 'number')
-            return;
-
-          if (oldAddresses !== undefined)
-            await this.watcher.unwatch(oldAddresses[this.address]);
-
-          await this.watcher.watch(newAddresses[this.address]);
+            await this.watcher.watch(newAddresses[this.address]);
+          }
         },
-      },
+      },*/
     },
 
     computed: {
@@ -260,6 +238,7 @@
        */
       onMouseOver() {
         this.hoverTimeout = setTimeout(this.showPopup.bind(this), 200);
+        this.hovered = true;
       },
 
       /**
@@ -299,16 +278,10 @@
         document.addEventListener('mousemove', (evt) => {
           if (!this.$el.contains(evt.target)) {
             this.popupVisible = false;
+            this.hovered = false;
             clearTimeout(this.hoverTimeout);
           }
         });
-      },
-
-      jumpToDefinition() {
-        EventBus.$emit(
-          'editor-set-line',
-          this.$emulator.sourceMap[this.computedValue],
-        );
       },
     },
   };
@@ -374,41 +347,10 @@
         left: 50%;
         margin-left: -8px;
       }
-
-      .popup {
-        color: $oc-gray-8;
-        text-align: left;
-        position: relative;
-        padding: 0.5em;
-        box-shadow: 0px 3px 10px -5px rgba(0,0,0,0.2);
-
-        /* background-image: linear-gradient(to bottom right, $oc-gray-2 0%, $oc-gray-3 100%); */
-        background-color: white;
-        border-radius: 3px;
-        border: 1px solid $oc-gray-4;
-
-        th {
-          text-align: left;
-        }
-
-        td {
-          text-align: right;
-          font-family: monospace;
-          font-size: 1rem;
-        }
-
-        a {
-          font-size: 0.8em;
-        }
-      }
     }
   }
 
   .no-wrap {
     white-space: nowrap;
-  }
-
-  a {
-    color: $oc-blue-6;
   }
 </style>
