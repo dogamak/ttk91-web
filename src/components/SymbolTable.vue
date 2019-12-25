@@ -8,8 +8,16 @@
       </tr>
       <tr v-for="symbol in symbols" :key="symbol.name">
         <td>{{ symbol.name }}</td>
-        <td><Value :value="symbol.address" format="hexadecimal"/></td>
-        <td><Value :address="symbol.address" /></td>
+        <td>
+          <Value
+            :value="symbol.address"
+            format="hexadecimal"
+            prefix
+            :width="4" />
+        </td>
+        <td>
+          <Value :address="symbol.address" />
+        </td>
       </tr>
       <tr v-if="symbols.length === 0">
         <td></td>

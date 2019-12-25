@@ -5,7 +5,7 @@
       :class="{ active: popupVisible }"
       @mouseover="onMouseOver"
       @mouseout="onMouseOut">
-      {{ formated(format) }}
+      {{ formatted(format, width) }}
     </span>
     <div
       v-if="hovered"
@@ -112,6 +112,15 @@
         default: 'decimal',
         validator: (value) => ['decimal', 'binary', 'hexadecimal'].indexOf(value) !== -1,
       },
+
+      /**
+       *
+       */
+      width: Number,
+
+      /**
+       */
+      prefix: Boolean,
     },
 
     beforeDestroy () {
@@ -182,6 +191,14 @@
 
         return this.watcher.addresses[this.address];
       },
+
+      formatPrefix() {
+        if (!this.prefix) {
+          return '';
+        }
+
+        return { hexadecimal: '0x', binary: '0b' }[this.format] || '';
+      },
     },
 
     methods: {
@@ -189,7 +206,7 @@
        * Returns the value ({@link Value.computedValue}) in the specified
        * numbering system.
        */
-      formated(format) {
+      formatted(format, pWidth) {
         if (typeof this.computedValue !== 'number') {
           return 'Undef.';
         }
@@ -211,23 +228,36 @@
           return result;
         }
 
-        if (format === 'decimal') {
-          return insertSpaces(value.toString(), 3);
-        }
+        const formatParams = {
+          decimal: {
+            radix: 10,
+            spacing: 3,
+            prefix: '',
+          },
+          hexadecimal: {
+            radix: 16,
+            spacing: 4,
+            prefix: '0x',
+            defaultWidth: 8,
+          },
+          binary: {
+            radix: 2,
+            spacing: 8,
+            prefix: '0b',
+            defaultWidth: 32,
+          },
+        };
 
-        if (format === 'hexadecimal') {
-          const num = value.toString(16).toUpperCase();
-          const pad = '0'.repeat(8 - num.length);
-          return `${sign}${insertSpaces(pad + num, 4)}`;
-        }
+        const { spacing, prefix, radix, defaultWidth } = formatParams[this.format];
+        const width = pWidth || defaultWidth;
 
-        if (format === 'binary') {
-          const num = value.toString(2).toUpperCase();
-          const pad = '0'.repeat(32 - num.length);
-          return `${sign}${insertSpaces(pad + num, 8)}`;
-        }
+        const digits = value.toString(radix).toUpperCase();
+        const padded = '0'.repeat(width - digits.length) + digits;
+        const truncated = padded.substr(padded.length - width);
+        const spaced = insertSpaces(truncated, spacing);
+        const prefixed = prefix + spaced;
 
-        return 'Invalid format';
+        return prefixed;
       },
 
       /**

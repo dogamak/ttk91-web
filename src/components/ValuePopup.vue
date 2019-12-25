@@ -3,17 +3,17 @@
     <table>
       <tr>
         <th>Decimal</th>
-        <td class="no-wrap">{{ formated('decimal') }}</td>
+        <td class="no-wrap">{{ formatted('decimal') }}</td>
       </tr>
       <tr>
         <th>Hexadecimal</th>
-        <td>{{ formated('hexadecimal') }}</td>
+        <td>{{ formatted('hexadecimal') }}</td>
       </tr>
       <tr>
         <th>Binary</th>
-        <td>{{ formated('binary') }}</td>
+        <td>{{ formatted('binary') }}</td>
       </tr>
-      <tr v-if="watcher.addresses[value] === 'undefined'">
+      <tr v-if="showReference">
         <th>References</th>
         <td>
           <Value :value="watcher.addresses[value]" />
@@ -62,12 +62,19 @@ export default {
     },
   },
 
+  computed: {
+    showReference() {
+      const ref = this.watcher.addresses[this.value];
+      return typeof ref === 'number' && this.value <= 0xFFFF;
+    },
+  },
+
   methods: {
     /**
      * Returns the value ({@link Value.computedValue}) in the specified
      * numbering system.
      */
-    formated(format) {
+    formatted(format) {
       if (typeof this.value !== 'number') {
         return 'Undef.';
       }

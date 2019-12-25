@@ -428,6 +428,8 @@ export class Emulator extends Many(Dispatcher, EventListener, MessageListener) {
     this.memory = {};
     this.registers = [0, 0, 0, 0, 0, 0, 0];
     this.symbols = {};
+    this.stack = [];
+    this.output = [];
   }
 
   /**

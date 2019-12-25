@@ -12,7 +12,7 @@
         <td></td>
       </tr>
       <tr v-for="entry in stack">
-        <td>{{ entry.address }}</td>
+        <td><Value :value="entry.address" :width=4 prefix format="hexadecimal" /></td>
         <td><Value :value="entry.value" /></td>
         <td>Pushed at line {{ entry.pushedAt }}</td>
       </tr>
