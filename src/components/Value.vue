@@ -38,12 +38,22 @@
 
     data () {
       return {
-        log: [],
+        /**
+         * `true` if the cursor is currently on top of the label or if the popup is currently visible.
+         * Used to prevent triggering {@link Value#showPopup} multiple times.
+         * @type {Boolean}
+         * @default false
+         */
         hovered: false,
+
+        /**
+         * Position of the popup relative to the inline value.
+         * @type {String}
+         * @values above, below
+         */
         direction: 'above',
 
         /**
-         * @name watcher
          * @type {MemoryWatcher}
          */
         watcher: this.$emulator.getWatcher(),
@@ -107,7 +117,8 @@
 
       /**
        * Specifies the format (numeral system) in which the in-line value is displayed.
-       * Supports the following values: decimal, binary and hexadecimal.
+       *
+       * @values decimal, binary, hexadecimal
        */
       format: {
         type: String,
@@ -116,11 +127,12 @@
       },
 
       /**
-       *
+       * Width of the displayed inline label in digits. Does not include the optional prefix of spacing.
        */
       width: Number,
 
       /**
+       * Display a prefix denoting the used numbering system. (`0x` or `0b`)
        */
       prefix: Boolean,
     },
@@ -130,21 +142,6 @@
     },
 
     watch: {
-      /**
-       * Updates the watched address whenever the {@link Value#value} prop updates.
-       */
-      /*value: {
-        immediate: true,
-        async handler (newValue, oldValue) {
-          if (oldValue !== null) {
-            //this.watcher.unwatch(oldValue);
-          }
-
-          this.log.push([oldValue, newValue]);
-          await this.watcher.watch(newValue);
-        },
-      },*/
-
       /**
        * Updates the watched addresses whenever the {@link Value#address} prop updates.
        */
@@ -161,22 +158,6 @@
           await this.watcher.watch(newAddress);
         },
       },
-
-      /**
-       * Updates the watcher for the referenced value whenever the pointer changes.
-       */
-      /*'watcher.addresses': {
-        immediate: true,
-        async handler (newAddresses, oldAddresses) {
-          if (this.address !== undefined) {
-            if (oldAddresses !== undefined) {
-              //await this.watcher.unwatch(oldAddresses[this.address]);
-            }
-
-            await this.watcher.watch(newAddresses[this.address]);
-          }
-        },
-      },*/
     },
 
     computed: {
@@ -194,6 +175,9 @@
         return this.watcher.addresses[this.address];
       },
 
+      /**
+       * Prefix displayed before the inline value.
+       */
       formatPrefix() {
         if (!this.prefix) {
           return '';
@@ -320,6 +304,11 @@
 
         const POPUP_MARGIN = 5;
 
+        // If the popup goes outside of the panel, shift it to left or right
+        // so that it is fully visible. If the popup does not fit to the panel,
+        // center it to the panel. The default is to center the popup to the
+        // inline part of the component if there is sufficient space.
+
         if (panelRect.width < popupRect.width + 2*POPUP_MARGIN) {
           const popupCenter = popupRect.x + popupRect.width / 2;
           const panelCenter = panelRect.x + panelRect.width / 2;
@@ -331,6 +320,10 @@
         } else {
           this.offsetX = 0;
         }
+
+        // If there is space below the inline part, display the popup there.
+        // Otherwise, try to show it above the inline part. If there is not enough
+        // space for the popup above OR below, place the popup below the inline part.
 
         const popupBelow = {
           height: popupRect.height,
@@ -348,6 +341,9 @@
         } else {
           this.direction = 'below';
         }
+
+        // Reset state related to popup positioning and hide the popup
+        // when the cursor moves outside the component.
 
         document.addEventListener('mousemove', (evt) => {
           if (!this.$el.contains(evt.target)) {
