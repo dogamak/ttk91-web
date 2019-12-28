@@ -9,7 +9,7 @@
     </span>
     <div
       v-if="hovered"
-      :class="{ visible: popupVisible }"
+      :class="{ visible: popupVisible, [direction]: true }"
       class="popup-spacer">
       <div
         class="popup"
@@ -22,6 +22,7 @@
 </template>
 
 <script>
+  import { intersection } from '../utils.js';
   import ValuePopup from './ValuePopup.vue';
 
   /**
@@ -39,6 +40,7 @@
       return {
         log: [],
         hovered: false,
+        direction: 'above',
 
         /**
          * @name watcher
@@ -290,25 +292,58 @@
        * when the mouse moves outside of the popup.
        */
       showPopup() {
-        this.popupVisible = true;
-
-        const popupRect = this.$refs.popup.getBoundingClientRect();
-        const panelRect = document.getElementsByClassName('control-panel')[0]
-          .getBoundingClientRect();
-
-        if (popupRect.x - 10 < panelRect.x) {
-          this.offsetX = panelRect.x - popupRect.x + 10;
+        if (this.popupVisible) {
+          return;
         }
 
-        if (popupRect.x + popupRect.width + 10 > panelRect.x + panelRect.width) {
-          this.offsetX = panelRect.x + panelRect.width
-            - popupRect.x - popupRect.width - 10;
+        this.popupVisible = true;
+
+        const panel = document.getElementsByClassName('control-panel')[0];
+
+        const panelRect = panel.getBoundingClientRect();
+        const popupRect = this.$refs.popup.getBoundingClientRect();
+
+        panelRect.x += panel.scrollLeft;
+        panelRect.y += panel.scrollTop;
+
+        console.log(popupRect, panelRect);
+
+        const viewport = {
+          x: window.pageXOffset,
+          y: window.pageYOffset,
+          width: window.innerWidth,
+          height: window.innerHeight,
+        };
+
+        const visibleRect = intersection(panelRect, popupRect, viewport);
+
+        const popupRightX = popupRect.x + popupRect.width;
+        const panelRightX = panelRect.x + panelRect.width;
+
+        const POPUP_MARGIN = 5;
+
+        if (panelRect.width < popupRect.width + 2*POPUP_MARGIN) {
+          const popupCenter = popupRect.x + popupRect.width / 2;
+          const panelCenter = panelRect.x + panelRect.width / 2;
+          this.offsetX = panelCenter - popupCenter;
+        } else if (popupRect.x - POPUP_MARGIN < panelRect.x) {
+          this.offsetX = panelRect.x - popupRect.x + POPUP_MARGIN;
+        } else if (panelRightX < popupRightX + POPUP_MARGIN) {
+          this.offsetX = panelRightX - popupRightX - POPUP_MARGIN;
+        } else {
+          this.offsetX = 0;
+        }
+
+        if (visibleRect.height < popupRect.height) {
+          this.direction = 'below';
         }
 
         document.addEventListener('mousemove', (evt) => {
           if (!this.$el.contains(evt.target)) {
             this.popupVisible = false;
             this.hovered = false;
+            this.direction = 'above';
+            this.offsetX = 0;
             clearTimeout(this.hoverTimeout);
           }
         });
@@ -339,43 +374,56 @@
       position: absolute;
       pointer-events: none;
       opacity: 0;
-      top: 100%;
       left: 50%;
       transform: translateX(-50%);
-      padding-top: 5px;
       z-index: 100;
+      padding: 1em;
+
+      &.below {
+        top: 100%;
+        padding-top: 5px;
+
+        &::before {
+          border-bottom-color: $oc-gray-4;
+          top: -13px;
+        }
+
+        &::after {
+          border-bottom-color: white;
+          top: -12px;
+        }
+      }
+
+      &.above {
+        bottom: 100%;
+        padding-bottom: 5px;
+
+        &::before {
+          border-top-color: $oc-gray-4;
+          bottom: -13px;
+        }
+
+        &::after {
+          border-top-color: white;
+          bottom: -12px;
+        }
+      }
 
       &.visible {
         pointer-events: initial;
         opacity: 1;
       }
 
-      &::before {
+      &::before, &::after {
         content: '';
         width: 0;
         height: 0;
         border-width: 10px;
         border-style: solid;
         border-color: transparent;
-        border-bottom-color: $oc-gray-4;
         position: absolute;
-        top: -13px;
         left: 50%;
         margin-left: -10px;
-      }
-
-      &::after {
-        content: '';
-        width: 0;
-        height: 0;
-        border-width: 8px;
-        border-style: solid;
-        border-color: transparent;
-        border-bottom-color: white;
-        position: absolute;
-        top: -9px;
-        left: 50%;
-        margin-left: -8px;
       }
     }
   }
