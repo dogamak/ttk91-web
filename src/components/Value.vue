@@ -306,8 +306,6 @@
         panelRect.x += panel.scrollLeft;
         panelRect.y += panel.scrollTop;
 
-        console.log(popupRect, panelRect);
-
         const viewport = {
           x: window.pageXOffset,
           y: window.pageYOffset,
@@ -334,7 +332,20 @@
           this.offsetX = 0;
         }
 
-        if (visibleRect.height < popupRect.height) {
+        const popupBelow = {
+          height: popupRect.height,
+          width: popupRect.width,
+          x: popupRect.x,
+          y: popupRect.y + popupRect.height,
+        };
+
+        const visibleBelow = intersection(popupBelow, panelRect, viewport);
+
+        if (visibleBelow.height === popupRect.height) {
+          this.direction = 'below';
+        } else if (visibleRect.height === popupRect.height) {
+          this.direction = 'above';
+        } else {
           this.direction = 'below';
         }
 
