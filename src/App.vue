@@ -102,7 +102,6 @@
   }
 
   .right-pane {
-    overflow-y: scroll;
   }
 
   .multipane-resizer:hover:before {

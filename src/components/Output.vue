@@ -1,27 +1,22 @@
 <template>
   <div class="output">
-    <div v-for="item in output">
-      <div class="decimal">
-        {{item}}
-      </div>
-      <div class="hexadecimal">
-        0x{{leftPad(item.toString(16), '0', 4)}}
-      </div>
-      <div class="binary">
-        0b{{leftPad(item.toString(2), '0', 16)}}
-      </div>
+    <div v-for="(item, index) in output" :key="index">
+      <Value :value="item" />
     </div>
   </div>
 </template>
 
 <script>
   import { leftPad } from '@/utils.js';
+  import Value from './Value.vue';
 
   /**
    * Displays the values the emulator has printed.
    */
   export default {
     name: 'Output',
+
+    components: { Value },
 
     methods: {
       leftPad,
@@ -65,22 +60,5 @@
 
   .output > div > div {
     display: inline-block;
-  }
-
-  .output > div:not(:hover) > div:not(.decimal) {
-    display: none;
-  }
-
-  .output .decimal {
-    width: 5em;
-  }
-  
-  .output .hexadecimal {
-    margin-right: 2em;
-    color: $oc-gray-5;
-  }
-
-  .output .binary {
-    color: $oc-gray-5;
   }
 </style>

@@ -5,6 +5,7 @@
 <script>
   import ace from 'ace-builds';
   import * as ttk91 from '@dogamak/ttk91-wasm';
+  import EventBus from '../bus.js';
 
   ace.config.set('basePath', '/ttk91web');
 
@@ -20,6 +21,12 @@
         editTimer: null,
         executionLineMarkerID: null,
 	    };
+    },
+
+    created() {
+      EventBus.$on('editor-set-line', (line) => {
+        this.editor.gotoLine(line);
+      });
     },
 
     mounted () {
@@ -42,13 +49,11 @@
 
     methods: {
       parse() {
-        console.log(this.editor.getValue());
 
         try {
           let result = ttk91.parse(this.editor.getValue());
           this.editor.getSession().setAnnotations([]);
         } catch (e) {
-          console.log(e);
           this.editor.getSession()
             .setAnnotations([{
               row: e.line-1,
@@ -70,8 +75,6 @@
       executionLine (newValue, oldValue) {
         let session = this.editor.getSession();
 
-        console.log(this.executionLineMarkerID);
-        console.log(newValue);
         session.removeMarker(this.executionLineMarkerID);
 
         this.executionLineMarkerID =
@@ -87,6 +90,7 @@
     height: 100%;
     border-right: 1px solid #d5d5d5;
     color: #495057;
+    z-index: -1;
   }
 
   .execution-line {

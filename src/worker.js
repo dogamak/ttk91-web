@@ -1,3 +1,14 @@
+import {
+  UPDATE_STACK_POINTER_MESSAGE,
+  SET_REGISTERS_MESSAGE,
+  SET_SYMBOL_TABLE_MESSAGE,
+  EVENT_MESSAGE,
+  OUTPUT_MESSAGE,
+  ADDRESS_RESPONSE_MESSAGE,
+  ADDRESS_QUERY_MESSAGE,
+  SET_SOURCE_MAP_MESSAGE,
+} from './messages.js';
+
 /**
  * @external {ttk91wasm}
  *
@@ -25,6 +36,19 @@ class EmulatorWorker {
     self.addEventListener('message', this.onMessage.bind(this));
   }
 
+  postMessage (message, payload) {
+    let type = message;
+
+    if (typeof type === 'object') {
+      type = message.name;
+    }
+
+    self.postMessage({
+      type,
+      ... payload,
+    });
+  }
+
   /**
    * Reset emulator by creating a new instance.
    *
@@ -36,19 +60,20 @@ class EmulatorWorker {
     this.emulator = this.wasm.create_emulator(program);
     this.emulator.add_listener('*', this.onEvent.bind(this));
 
-    self.postMessage({
-      type: 'update_stack_pointer',
+    this.postMessage(UPDATE_STACK_POINTER_MESSAGE, {
       address: this.emulator.stack_pointer(),
     });
 
-    self.postMessage({
-      type: 'setRegisters',
+    this.postMessage(SET_REGISTERS_MESSAGE, {
       registers: this.emulator.registers(),
     });
 
-    self.postMessage({
-      type: 'setSymbolTable',
+    this.postMessage(SET_SYMBOL_TABLE_MESSAGE, {
       symbols: this.emulator.symbol_table(),
+    });
+
+    this.postMessage(SET_SOURCE_MAP_MESSAGE, {
+      sourceMap: this.emulator.source_map(),
     });
   }
 
@@ -63,15 +88,14 @@ class EmulatorWorker {
     if (method === undefined)
       return;
 
-    let result = method(evt.data.payload);
+    let respond = (event, payload) => {
+      this.postMessage(event, {
+        id: evt.data.id,
+        payload,
+      });
+    };
 
-    if (result === undefined)
-      return;
-
-    self.postMessage({
-      id: evt.data.id,
-      payload: result,
-    });
+    method(evt.data.payload, respond);
   }
 
   /**
@@ -82,8 +106,7 @@ class EmulatorWorker {
    * @param {Object} event.payload - The event payload whose schema depends on the event type.
    */
   onEvent ({ type, payload }) {
-    self.postMessage({
-      type: 'event',
+    this.postMessage(EVENT_MESSAGE, {
       kind: type,
       payload,
     });
@@ -99,7 +122,6 @@ class EmulatorWorker {
    * @param {string} message.program - The program source code.
    */
   load ({ program }) {
-    console.log(program);
     this.resetEmulator(program);
   }
 
@@ -115,7 +137,6 @@ class EmulatorWorker {
     while (!this.halted) {
       let output = this.step();
 
-      console.log(output.calls());
       if (output.calls().indexOf(11) != -1) {
         this.halted = true;
       }
@@ -140,16 +161,14 @@ class EmulatorWorker {
     let old_sp = this.emulator.stack_pointer();
     let output = this.emulator.step();
 
-    self.postMessage({
-      type: 'output',
+    this.postMessage(OUTPUT_MESSAGE, {
       output: output.output(),
       registers: this.emulator.registers(),
       line: output.line,
     });
 
     if (old_sp != this.emulator.stack_pointer()) {
-      self.postMessage({
-        type: 'update_stack_pointer',
+      this.postMessage(UPDATE_STACK_POINTER_MESSAGE, {
         address: this.emulator.stack_pointer(),
       });
     }
@@ -166,10 +185,10 @@ class EmulatorWorker {
    * @param {Object} message - The message object.
    * @param {number} message.address - The address of the memory location.
    */
-  readAddress ({ address }) {
+  readAddress ({ address }, respond) {
     let value = this.emulator.read_address(address);
 
-    return { address, value };
+    respond(ADDRESS_RESPONSE_MESSAGE, { address, value });
   }
 }
 

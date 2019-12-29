@@ -1,73 +1,42 @@
 import Vue from 'vue';
 import Vuex from 'vuex';
 import store from './store.js';
-export let worker = new Worker('/ttk91web/worker.js');
+
+import { Dispatcher, scopedListener } from './listener.js';
+import {
+  MESSAGE_NAMESPACE,
+  EVENT_NAMESPACE,
+  MEMORY_CHANGE_EVENT,
+  REGISTER_CHANGE_EVENT,
+  SET_REGISTERS_MESSAGE,
+  SET_SYMBOL_TABLE_MESSAGE,
+  OUTPUT_MESSAGE,
+  EVENT_MESSAGE,
+  SET_SOURCE_MAP_MESSAGE,
+} from './messages.js';
+
+import { Many } from '@/utils.js';
 
 /**
- * This monstrosity is used to generate the `eventHandler` and `messageHandler`
- * decorators.  The first arguments is the name of the property where a list of
- * the listeners should be maintained.  The second argument is the name of the
- * generated dispatch method, which is used to send messages to the listeners.
+ * Scoped listener associated with
+ * {@link module:Messages.MESSAGE_NAMESPACE|MESSAGE_NAMESPACE}
+ * which is used for messages originating from the web worker.
  *
- * @param {string} listPropertyName - Name of the class property into which the
- *    list of callbacks will be stored.
- * @param {string} dispatchMethodName - Name for a generated method for
- *    dispatching messages to the callbacks.
- *
- * @return {function} A method decorator.
+ * @type {ScopedListener}
  */
-function callbackRegisteringDecoratorFactory (
-  listPropertyName,
-  dispatchMethodName,
-) {
-  return (messageType) => {
-    return (target, name, descriptor) => {
-      if (target[dispatchMethodName] === undefined) {
-        target[dispatchMethodName] = async function (eventName, payload) {
-          let listeners = this[listPropertyName][eventName];
-
-          if (listeners !== undefined) {
-            for (let listener of listeners) {
-              await Promise.resolve(listener.call(this, payload));
-            }
-          }
-        }
-      }
-
-      if (target[listPropertyName] === undefined)
-        target[listPropertyName] = {};
-
-      if (target[listPropertyName][messageType] === undefined)
-        target[listPropertyName][messageType] = [];
-
-      let listeners = target[listPropertyName][messageType];
-
-      listeners.push(descriptor.value);
-    };
-  }
-}
+const MessageListener = scopedListener(MESSAGE_NAMESPACE);
 
 /**
- * Decorator that registers the method as an message handler.
+ * Scoped listener associated with
+ * {@link module:Messages.EVENT_NAMESPACE|EVENT_NAMESPACE}
+ * which is used for events originating from the emulator.
  *
- * @param {string} name - The name of the message type this method will be
- * called for.
+ * @type {ScopedListener}
  */
-const messageHandler = callbackRegisteringDecoratorFactory(
-  'messageHandlers',
-  'dispatchMessage',
-);
+const EventListener = scopedListener(EVENT_NAMESPACE);
 
-/**
- * Decorator that registers the method as an event handler.
- *
- * @param {string} name - The name of the event type this method will be
- * called for.
- */
-const eventHandler = callbackRegisteringDecoratorFactory(
-  'eventHandler',
-  'dispatchEvent',
-);
+
+let worker = new Worker('/ttk91web/worker.js');
 
 /**
  * A message from the web worker.
@@ -93,28 +62,136 @@ const eventHandler = callbackRegisteringDecoratorFactory(
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/MessageEvent|MessageEvent at MDN}
  */
 
+/**
+ * Index number of the register used for storing the stack pointer.
+ */
 const STACK_POINTER_REGISTER = 7;
+
+/**
+ * Class for getting a reactive view into the emulator's virtual memory.
+ */
+class MemoryWatcher extends EventListener {
+  /**
+   * Create a new instance that is associated with the provided {@link Emulator}
+   * instance.
+   */
+  constructor (emulator) {
+    super();
+    this.emulator = emulator;
+    this.emulator.register(MEMORY_CHANGE_EVENT, this);
+
+    /**
+     * List of watched memory locations.
+     *
+     * @name MemoryWatcher@watched
+     * @type {number[]}
+     */
+    Vue.util.defineReactive(this, 'watched', []);
+
+    /**
+     * Map that contains the watched memory addresses end their values.
+     * This map is updated automatically and is reactive when used in Vue
+     * components.
+     *
+     * @name MemoryWatcher#addresses
+     * @type {Object<number, number>}
+     */
+    Vue.util.defineReactive(this, 'addresses', {});
+  }
+
+  /**
+   * Add an address into the list of watched addresses.
+   * If the value of that address if in the cache, update
+   * {@link MemoryWatcher#addresses} immediately. Otherwise, query the web worker for
+   * the value. The returned promise resolves after the address has been updated.
+   *
+   * @param {number} address - Address of the memory location whose value will be
+   *    added into {@link MemoryWatcher#addresses} and kept up-to-date.
+   * @return {Promise}
+   */
+  async watch (address, a) {
+    await this.emulator.refreshAddress(address);
+    this.watched.push(address);
+    Vue.set(this.addresses, address, this.emulator.memory[address]);
+  }
+  
+  /**
+   * Stop changes in the specified memory location from triggering updates.
+   *
+   * @param {number} address - Address of the memory location.
+   */
+  unwatch (address) {
+    const i = this.watched.indexOf(address);
+
+    if (i === -1) {
+      return;
+    }
+
+    this.watched.splice(i, 1);
+    Vue.set(this.addresses, address, undefined);
+  }
+
+  /**
+   * Unregisters this instance from the {@link Emulator} and clears
+   * {@link MemoryWatcher#addresses}. Not calling this will lead to a memory leak
+   * as the Emulator holds a reference to this instance.
+   */
+  destroy () {
+    this.emulator.unregister(MEMORY_CHANGE_EVENT, this);
+    this.adresses = {};
+  }
+
+  /**
+   * Event handler that is called every time a memory location changes value.
+   * If the changed memory location is registered as being watched on this instance,
+   * updates {@link MemoryWatcher#addresses}.
+   *
+   * @listens module:Messages~event:MemoryChangeEvent 
+   * @param {module:Messages~event:MemoryChangeEvent} event - Event object.
+   */
+  @EventListener.handler(MEMORY_CHANGE_EVENT)
+  onMemoryChange ({ address, value }) {
+    if (this.watched.indexOf(address) !== -1) {
+      Vue.set(this.addresses, address, value);
+    }
+  }
+}
 
 /**
  * An emulator instance running as a separate thread in a web worker.
  */
-export class Emulator {
+export class Emulator extends Many(Dispatcher, EventListener, MessageListener) {
   /**
    * Spawns a new web worker for the emulator and registers neccessary
    * callbacks to it.
    */
   constructor () {
-    this.worker = new Worker('/ttk91web/worker.js');
+    super();
 
-    this.messageId = 0;
-    this.promises = {};
+    /**
+     *
+     * @name Emulator#worker
+     * @type {Worker}
+     */
+    this.worker = new Worker('/ttk91web/worker.js');
 
     this.worker.addEventListener('message', this.onMessage.bind(this));
 
-    this.stack = [];
-    this.output = [];
+    /**
+     * @name Emulator#messageId
+     * @type {number}
+     */
+    this.messageId = 0;
+
+    /**
+     * @name Emulator#promises
+     * @type {Object<number, Promise>}
+     */
+    this.promises = {};
 
     this.watchers = {};
+
+    this.register({ name: '*', namespace: '*' }, this);
 
     /**
      * Array containing the work registers' values.
@@ -170,11 +247,20 @@ export class Emulator {
     Vue.util.defineReactive(this, 'stack', []);
 
     /**
-     * The highgest memory address of the stack.
+     * The highest memory address of the stack.
      * @type {number}
      * @name Emulator#stackBaseAddress
      */
     Vue.util.defineReactive(this, 'stackBaseAddress', null);
+
+    /**
+     * Map object that associates memory locations with the source code lines number
+     * in which that location was defined.
+     *
+     * @type {SourceMap}
+     * @name Emulator#sourceMap
+     */
+    Vue.util.defineReactive(this, 'sourceMap', {});
 
     /**
      * The memory address of the stack head.
@@ -186,10 +272,6 @@ export class Emulator {
         return this.registers[STACK_POINTER_REGISTER];
       },
     });
-
-    /*Object.defineProperty(this, 'registers', {
-      get () { return this._registers; }
-    });*/
   }
 
   /**
@@ -218,6 +300,45 @@ export class Emulator {
   }
 
   /**
+   * Refresh the memory cache at the specified address.
+   * If the cache contains no data for that memory location, sends a query to the
+   * web worker and populates the cache with the response.
+   *
+   * @param {number} address - Address of the memory location whose value will be
+   *    refreshed.
+   * @return {Promise} Promise that resolves after the memory location has been
+   *    refreshed. The fresh value can be accessed normally through
+   *    {@link Emulator#memory}.
+   */
+  async refreshAddress (address) {
+    if (this.memory[address] === undefined) {
+      let response = await this.readAddress(address);
+      Vue.set(this.memory, address, response.payload.value);
+    }
+  }
+
+  /**
+   * Constructs a {@link MemoryWatcher} instance that is tied to this
+   * {@link Emulator} instance.
+   */
+  getWatcher () {
+    return new MemoryWatcher(this);
+  }
+
+  /*
+   * Register a wathcer for a memory location.
+  watchAddress (address, watcher) {
+    let watcherId = hyperid();
+    this.watchers.set(watcherId, watcher);
+    
+    if (address in this.locationWatchers) {
+      this.locationWatchers[address].push(watcher)
+    } else {
+      this.locationWatchers[address] = [watcher];
+    }
+  }*/
+
+  /**
    * Updates our view of the stack on stack pointer changes.
    * On stack pushes, resolves the pushed values and records
    * metadata about them (e.g. when they were pushed).
@@ -236,12 +357,10 @@ export class Emulator {
       }
     } else {
       for (let addr = oldStackPointer; addr < this.stackPointer; addr++) {
-        console.log('POP!');
         this.stack.pop();
         delete this.stackMetadata[addr];
       }
     }
-    console.log(this.stack);
   }
 
   /**
@@ -292,8 +411,10 @@ export class Emulator {
         promise.resolve(data);
       }
     } else {
-      console.log(data);
-      this.dispatchMessage(data.type, data);
+      this.dispatch({
+        namespace: MESSAGE_NAMESPACE,
+        name: data.type
+      }, data);
     }
   }
 
@@ -304,9 +425,11 @@ export class Emulator {
    */
   execute (program) {
     this.postMessage('load', { program });
-    this.memory = [];
+    this.memory = {};
     this.registers = [0, 0, 0, 0, 0, 0, 0];
     this.symbols = {};
+    this.stack = [];
+    this.output = [];
   }
 
   /**
@@ -348,13 +471,10 @@ export class Emulator {
    * Message handler that is called every time the emulator has produced more
    * output.
    *
-   * @param {Object} message - The message object.
-   * @param {number[]} message.registers - State of the emulator's registers.
-   * @param {number[]} message.output - An array containing all numbers printed
-   *    by the program since it's launch.
-   * @param {number} message.line - The current source code line of execution.
+   * @listens module:Messages~event:OutputMessage
+   * @param {module:Messages~event:OutputMessage} message - The message object.
    */
-  @messageHandler('output')
+  @MessageListener.handler(OUTPUT_MESSAGE)
   onOutput ({ registers, output, line }) {
     this.output = output;
     this.executionLine = line;
@@ -363,10 +483,10 @@ export class Emulator {
   /**
    * Message handler that is called whenever all emulator's registers are reset.
    *
-   * @param {Object} message - The message object.
-   * @param {number[]} message.registers - New values for all registers.
+   * @listens module:Messages~event:SetRegistersMessage
+   * @param {module:Messages~event:SetRegistersMessage} message - The message object.
    */
-  @messageHandler('setRegisters')
+  @MessageListener.handler(SET_REGISTERS_MESSAGE)
   onSetRegisters ({ registers }) {
     for (let i = 1; i < registers.length; i++) {
       this.onRegisterChange({
@@ -380,25 +500,22 @@ export class Emulator {
    * Message handler that is called every time the emulator emits a new event.
    * The event is dispatched further to the appropriate event handler.
    *
-   * @param {Object} message - The message object.
-   * @param {string} message.kind - The event kind. This determines the invoked
-   *    event handler.
-   * @param {Object} message.payload - The event payload.
+   * @listens module:Messages~event:EventMessage
+   * @param {module:Messages~event:EventMessage} message - The message object.
    */
-  @messageHandler('event')
+  @MessageListener.handler(EVENT_MESSAGE)
   async onEmulatorEvent ({ kind, payload }) {
-    await this.dispatchEvent(kind, payload);
+    this.dispatch({ namespace: EVENT_NAMESPACE, name: kind }, payload);
   }
 
   /**
    * Event handler that is called whenever a register's value changes.
    *
-   * @param {Object} event - The event object.
-   * @param {number} event.register - The index of the changed register.
-   * @param {number} event.data - The new value of the register.
+   * @listens module:Messages~event:RegisterChangeEvent
+   * @param {module:Messages~event:RegisterChangeEvent} event - The event object.
    */
-  @eventHandler('register-change')
-  async onRegisterChange ({ register, data }) {
+  @EventListener.handler(REGISTER_CHANGE_EVENT)
+  onRegisterChange ({ register, data }) {
     let old = this.registers[register];
 
     Vue.set(this.registers, register, data);
@@ -417,8 +534,11 @@ export class Emulator {
    *
    * Updates the value into {@link Emulator#memory}.
    * TODO: Do not track changes in which we are not interested in.
+   *
+   * @listens module:Messages~event:MemoryChangeEvent
+   * @param {module:Messages~event:MemoryChangeEvent}
    */
-  @eventHandler('memory-change')
+  @EventListener.handler(MEMORY_CHANGE_EVENT)
   onMemoryChange({ address, data }) {
     Vue.set(this.memory, address, data);
 
@@ -431,19 +551,29 @@ export class Emulator {
   /**
    * Message handler that is called whenever we receive a new symbol table.
    *
-   * @param {Object} message - The message object.
-   * @param {Object<string, number>} message.symbols - Map from symbol names into
-   *    memory addresses.
+   * @listens module:Messages~event:SetSymbolTableMessage
+   * @param {module:Messages~event:SetSymbolTableMessage}
    */
-  @messageHandler('setSymbolTable')
+  @MessageListener.handler(SET_SYMBOL_TABLE_MESSAGE)
   async onSetSymbolTable ({ symbols }) {
     this.symbols = symbols;
 
     for (let address of Object.values(symbols)) {
       let res = await this.readAddress(address);
-      console.log(address, res);
       Vue.set(this.memory, address, res.payload.value);
     }
+  }
+
+  /**
+   * Message handler that updates the value of {@link Emulator.sourceMap} whenever
+   * the worker sends a new source map.
+   *
+   * @listens module:Messages~event:SetSourceMapMessage
+   * @param {module:Messages~event:SetSourceMapMessage}
+   */
+  @MessageListener.handler(SET_SOURCE_MAP_MESSAGE)
+  onSetSourceMap({ sourceMap }) {
+    this.sourceMap = sourceMap;
   }
 }
 

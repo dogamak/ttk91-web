@@ -4,14 +4,19 @@
       <tr>
         <th></th>
         <th>Decimal</th>
-        <th>Hexadecimal</th>
-        <th>Binary</th>
+        <th>Hex</th>
+        <th>References</th>
       </tr>
       <tr v-for="register in registers">
         <th>{{register.name}}</th>
-        <td>{{register.value}}</td>
-        <td>{{leftPad(register.value.toString(16), '0', 4)}}</td>
-        <td>{{leftPad(register.value.toString(2), '0', 16)}}</td>
+        <td><Value :value="register.value" format="decimal"/></td>
+        <td><Value :value="register.value" format="hexadecimal"/></td>
+        <td style="text-align: left">
+          <Value
+            v-show="watcher.addresses[register.value] !== undefined"
+            format="hexadecimal"
+            :value="watcher.addresses[register.value]" />
+        </td>
       </tr>
     </table>
   </div>
@@ -19,12 +24,33 @@
 
 <script>
   import { leftPad } from '@/utils.js';
+  import Value from './Value.vue';
 
   /**
    * Displays a table of all registers and their values in multiple formats.
    */
   export default {
     name: 'Registers',
+
+    components: { Value },
+
+    data () {
+      return {
+        watcher: this.$emulator.getWatcher(),
+      };
+    },
+
+    watch: {
+      '$emulator.registers' (registers, oldRegisters) {
+        for (let value of oldRegisters) {
+          this.watcher.unwatch(value);
+        }
+
+        for (let value of registers) {
+          this.watcher.watch(value);
+        }
+      }
+    },
 
     computed: {
       /**
