@@ -1,5 +1,11 @@
 language: node_js
 node_js: "10"
 
-script:
-  - ./node_modules/.bin/webpack
+script: npm run build
+
+deploy:
+  edge: true
+  provider: script
+  script: rsync --delete -avz "$TRAVIS_BUILD_DIR/dist/" "ttk91web@karhusaari.me:/var/www/ttk91web"
+  on:
+    branch: master
