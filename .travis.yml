@@ -20,5 +20,5 @@ deploy:
     provider: script
     script: rsync --delete -avz "$TRAVIS_BUILD_DIR/dist/" "ttk91web@karhusaari.me:/var/www/ttk91web-staging"
     on:
-      all_barnch: true
+      all_branch: true
       condition: $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+-
