@@ -18,7 +18,7 @@ deploy:
       condition: $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$
   - edge: true
     provider: script
-    script: rsync --delete -avz "$TRAVIS_BUILD_DIR/dist/" "ttk91web@karhusaari.me:/var/www/ttk91web-staging"
+    script: rsync --delete -avz -e "ssh -o StrictHostKeyChecking=no" "$TRAVIS_BUILD_DIR/dist/"  "ttk91web@karhusaari.me:/var/www/ttk91web-staging"
     on:
       all_branch: true
       condition: $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+-
