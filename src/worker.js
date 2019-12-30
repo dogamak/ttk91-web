@@ -192,7 +192,7 @@ class EmulatorWorker {
   }
 }
 
-import('ttk91').then((wasm) => {
+import('ttk91-wasm').then((wasm) => {
   wasm.init_panic_hook();
   new EmulatorWorker(wasm);
 }, (err) => console.error(err));

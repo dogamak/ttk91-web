@@ -4,7 +4,7 @@
 
 <script>
   import ace from 'ace-builds';
-  import * as ttk91 from '@dogamak/ttk91-wasm';
+  import * as ttk91 from 'ttk91-wasm';
   import EventBus from '../bus.js';
 
   ace.config.set('basePath', '/ttk91web');
