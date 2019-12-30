@@ -6,7 +6,7 @@ USERNAME="ttk91web"
 HOSTNAME="karhusaari.me"
 
 _deploy() {
-  echo rsync --delete -avz -e "ssh -o StrictHostKeyChecking=no" \
+  rsync --delete -avz -e "ssh -o StrictHostKeyChecking=no" \
     "$SOURCE" \
     "$USERNAME@$HOSTNAME:$WWW_ROOT/$1"
 }
