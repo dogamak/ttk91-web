@@ -1,33 +1,32 @@
 {
-  "name": "create-wasm-app",
+  "name": "ttk91-web",
   "version": "0.1.0",
-  "description": "create an app to consume rust-generated wasm packages",
+  "description": "An emulator, debugger and development environment for the TTK91 instruction set in your browser.",
   "main": "index.js",
-  "bin": {
-    "create-wasm-app": ".bin/create-wasm-app.js"
-  },
   "scripts": {
     "build": "webpack --config webpack.config.js",
     "start": "webpack-dev-server"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rustwasm/create-wasm-app.git"
+    "url": "git+https://github.com/dogamak/ttk91-web.git"
   },
   "keywords": [
     "webassembly",
     "wasm",
     "rust",
-    "webpack"
+    "webpack",
+    "ttk91",
+    "vue"
   ],
-  "author": "Ashley Williams <ashley666ashley@gmail.com>",
-  "license": "(MIT OR Apache-2.0)",
+  "author": "Mitja Karhusaari <mitja@karhusaari.me>",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/rustwasm/create-wasm-app/issues"
+    "url": "https://github.com/dogamak/ttk91-web/issues"
   },
-  "homepage": "https://github.com/rustwasm/create-wasm-app#readme",
+  "homepage": "https://github.com/dogamak/ttk91-web#readme",
   "dependencies": {
-    "@dogamak/ttk91-wasm": "^0.1.3",
+    "ttk91-wasm": "0.1.3",
     "ace-builds": "^1.4.7",
     "hyperid": "^2.0.2"
   },
