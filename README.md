@@ -3,7 +3,7 @@
   <a href="https://travis-ci.com/dogamak/ttk91-web">
     <img src="https://travis-ci.com/dogamak/ttk91-web.svg?token=9iyfi5y6puZMvv9MzzXy&branch=master" />
   </a>
-  <img src="https://img.shields.io/badge/version-v0.1.0--alpha1-blue" />
+  <img src="https://img.shields.io/badge/version-v0.1.0--alpha7-blue" />
   <a href="https://karhusaari.me/ttk91web/"><img src="https://img.shields.io/badge/try%20it-here-blue" /></a>
 </p>
 

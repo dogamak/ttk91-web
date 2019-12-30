@@ -1,6 +1,6 @@
 {
   "name": "ttk91-web",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha7",
   "description": "An emulator, debugger and development environment for the TTK91 instruction set in your browser.",
   "main": "index.js",
   "scripts": {
