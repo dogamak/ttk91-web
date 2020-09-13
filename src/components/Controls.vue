@@ -1,6 +1,6 @@
 <template>
   <div class="controls">
-    <Button label="Load" primary @click="onExecute" />
+    <Button label="Load" :disabled="disableLoad" primary @click="onExecute"/>
     <Button label="Run" @click="onRun" />
     <Button label="Step" @click="onStep" />
     <Button label="Stop" @click="onStop" />
@@ -30,6 +30,12 @@
 
       onStop () {
         this.$emulator.stop();
+      },
+    },
+
+    computed: {
+      disableLoad () {
+        return this.$store.state.parseState !== 'success';
       },
     },
   }

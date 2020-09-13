@@ -65,7 +65,7 @@ let worker = new Worker('/ttk91web/worker.js');
 /**
  * Index number of the register used for storing the stack pointer.
  */
-const STACK_POINTER_REGISTER = 7;
+const STACK_POINTER_REGISTER = 6;
 
 /**
  * Class for getting a reactive view into the emulator's virtual memory.
@@ -463,8 +463,14 @@ export class Emulator extends Many(Dispatcher, EventListener, MessageListener) {
    *
    * @return {Promise<Message>} Promise resolving the response message.
    */
-  readAddress (address) {
-    return this.postMessage('readAddress', { address }, true);
+  async readAddress (address) {
+    let response = await this.postMessage('readAddress', { address }, true);
+
+    if (response.type === 'addressError') {
+      throw response;
+    }
+
+    return response;
   }
 
   /**
@@ -475,9 +481,10 @@ export class Emulator extends Many(Dispatcher, EventListener, MessageListener) {
    * @param {module:Messages~event:OutputMessage} message - The message object.
    */
   @MessageListener.handler(OUTPUT_MESSAGE)
-  onOutput ({ registers, output, line }) {
+  onOutput ({ registers, output, line, pc }) {
     this.output = output;
     this.executionLine = line;
+    console.log(`PC: ${pc}`);
   }
 
   /**

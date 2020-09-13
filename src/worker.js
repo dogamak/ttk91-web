@@ -6,6 +6,7 @@ import {
   OUTPUT_MESSAGE,
   ADDRESS_RESPONSE_MESSAGE,
   ADDRESS_QUERY_MESSAGE,
+  ADDRESS_ERROR_MESSAGE,
   SET_SOURCE_MAP_MESSAGE,
 } from './messages.js';
 
@@ -165,6 +166,7 @@ class EmulatorWorker {
       output: output.output(),
       registers: this.emulator.registers(),
       line: output.line,
+      pc: this.emulator.get_program_counter(),
     });
 
     if (old_sp != this.emulator.stack_pointer()) {
@@ -186,9 +188,12 @@ class EmulatorWorker {
    * @param {number} message.address - The address of the memory location.
    */
   readAddress ({ address }, respond) {
-    let value = this.emulator.read_address(address);
-
-    respond(ADDRESS_RESPONSE_MESSAGE, { address, value });
+    try {
+      let value = this.emulator.read_address(address);
+      respond(ADDRESS_RESPONSE_MESSAGE, { address, value });
+    } catch (err) {
+      respond(ADDRESS_ERROR_MESSAGE, { address });
+    }
   }
 }
 

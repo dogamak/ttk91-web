@@ -30,6 +30,11 @@ const appConfig = {
         ],
       },
       {
+        test: /\.json$/,
+        use: ['file-loader'],
+        type: 'javascript/auto',
+      },
+      {
         test: /\.css$/,
         use: ['vue-style-loader', 'css-loader'],
       },
@@ -51,8 +56,8 @@ const appConfig = {
         exclude: /node_modules/,
       },
       {
-        test: /\.(svg|png|jpe?g)$/,
-        loader: 'url-loader',
+        test: /\.(svg|ttf|png|jpe?g)$/,
+        loader: 'file-loader',
         options: {
           esModule: false,
         },

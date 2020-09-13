@@ -160,6 +160,11 @@ export const ADDRESS_QUERY_MESSAGE = {
   name: 'addressQuery',
 };
 
+export const ADDRESS_ERROR_MESSAGE = {
+  namespace: MESSAGE_NAMESPACE,
+  name: 'addressError',
+};
+
 /**
  * Message sent from the main thread to the worker that queries the current value
  * of a specified memory location.
